@@ -6,8 +6,8 @@ import org.springframework.data.repository.CrudRepository;
 import java.util.Date;
 
 public interface BookingRepo extends CrudRepository<Booking, Long> {
-    Booking[] findByMerchantId(Long merchantId);
-    Booking[] findByClientId(Long clientId);
-    Booking[] findAllByDateAfterAndDateBefore(Date minDate, Date maxDate);
-    Booking[] findByBookingId(Long bookingId);
+    Iterable<Booking> findByMerchantId(Long merchantId);
+    Iterable<Booking> findByClientId(Long clientId);
+    Iterable<Booking> findAllByDateAfterAndDateBefore(Date minDate, Date maxDate);
+    Iterable<Booking> findByBookingId(Long bookingId);
 }

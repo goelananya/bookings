@@ -22,11 +22,11 @@ public class BookingService {
         return bookingRepo.save(booking);
     }
 
-    public Booking[] getBookingForClient(Long clientId){
+    public Iterable<Booking> getBookingForClient(Long clientId){
         return bookingRepo.findByClientId(clientId);
     }
 
-    public Booking[] getBookingsForMerchant(Long merchantId){
+    public Iterable<Booking> getBookingsForMerchant(Long merchantId){
         return bookingRepo.findByMerchantId(merchantId);
     }
 
@@ -34,11 +34,11 @@ public class BookingService {
         return bookingRepo.findAll();
     }
 
-    public Booking[] getBookingsInDateRange(Date minDate, Date maxDate){
+    public Iterable<Booking> getBookingsInDateRange(Date minDate, Date maxDate){
         return bookingRepo.findAllByDateAfterAndDateBefore(minDate, maxDate);
     }
 
-    public Booking[] findByBookingId(Long bookingId){
+    public Iterable<Booking> findByBookingId(Long bookingId){
         return bookingRepo.findByBookingId(bookingId);
     }
 }
