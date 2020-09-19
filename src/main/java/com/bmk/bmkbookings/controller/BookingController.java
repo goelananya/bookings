@@ -2,6 +2,7 @@ package com.bmk.bmkbookings.controller;
 
 
 import com.bmk.bmkbookings.bo.Booking;
+import com.bmk.bmkbookings.exception.InvalidStatusException;
 import com.bmk.bmkbookings.exception.UnauthorizedUserException;
 import com.bmk.bmkbookings.request.in.UpdateBookingStatus;
 import com.bmk.bmkbookings.response.out.BookingSuccessResponse;
@@ -22,6 +23,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.awt.print.Book;
+import java.util.HashSet;
+import java.util.Set;
 
 @RequestMapping("booking")
 @RestController
@@ -30,11 +33,16 @@ public class BookingController {
     private static final Logger logger = LoggerFactory.getLogger(BookingController.class);
     private final BookingService bookingService;
     private static RestClient restClient;
+    private static Set<String> statusSet = new HashSet<>();
 
     @Autowired
     public BookingController(BookingService bookingService, RestClient restClient){
         this.bookingService = bookingService;
         this.restClient = restClient;
+        statusSet.add("cancel");
+        statusSet.add("approve");
+        statusSet.add("deny");
+        statusSet.add("completed");
     }
 
     @GetMapping("/merchant")
@@ -98,16 +106,19 @@ public class BookingController {
     }
 
     @PutMapping("client/updateStatus")
-    public ResponseEntity updateBookingStatus(@RequestHeader String token, @RequestBody String param) throws UnauthorizedUserException, JsonProcessingException {
+    public ResponseEntity updateBookingStatus(@RequestHeader String token, @RequestBody String param){
         String apiType = ApiTypes.delta.toString();
         try {
             Long clientId = restClient.authorize(token, apiType);
             UpdateBookingStatus bookingStatus = new ObjectMapper().readValue(param, UpdateBookingStatus.class);
+            if(!statusSet.contains(bookingStatus.getStatus())) throw new InvalidStatusException();
             Booking booking = bookingService.findByBookingId(bookingStatus.getBookingId()).iterator().next();
             if(!booking.getClientId().equals(clientId))  throw new UnauthorizedUserException();
             booking.setStatus(bookingStatus.getStatus());
             bookingService.addNewBooking(booking);
             return ResponseEntity.ok(new GenericResponse("200", "Success", booking));
+        } catch (InvalidStatusException e){
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("403", "Invalid Status"));
         } catch (UnauthorizedUserException e){
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("403", "User cannot edit this booking"));
         } catch(Exception e){
@@ -121,6 +132,7 @@ public class BookingController {
         try {
             Long merchantId = restClient.authorize(token, apiType);
             UpdateBookingStatus bookingStatus = new ObjectMapper().readValue(param, UpdateBookingStatus.class);
+            if(!statusSet.contains(bookingStatus.getStatus())) throw new InvalidStatusException();
             Booking booking = bookingService.findByBookingId(bookingStatus.getBookingId()).iterator().next();
             if(!booking.getMerchantId().equals(merchantId)) throw new UnauthorizedUserException();
             booking.setStatus(bookingStatus.getStatus());
@@ -128,6 +140,8 @@ public class BookingController {
             return ResponseEntity.ok(new GenericResponse("200", "Success", booking));
         } catch (UnauthorizedUserException e){
           return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("403", "User cannot edit this booking"));
+        } catch (InvalidStatusException e){
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("403", "Invalid Status"));
         } catch(Exception e){
             return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(new ErrorResponse("424", "Unknown error encountered"));
         }
