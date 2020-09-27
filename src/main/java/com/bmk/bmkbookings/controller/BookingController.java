@@ -2,9 +2,11 @@ package com.bmk.bmkbookings.controller;
 
 
 import com.bmk.bmkbookings.bo.Booking;
+import com.bmk.bmkbookings.bo.Notification;
 import com.bmk.bmkbookings.exception.InvalidStatusException;
 import com.bmk.bmkbookings.exception.UnauthorizedUserException;
 import com.bmk.bmkbookings.request.in.UpdateBookingStatus;
+import com.bmk.bmkbookings.request.out.FcmRequest;
 import com.bmk.bmkbookings.response.out.BookingSuccessResponse;
 import com.bmk.bmkbookings.response.out.BookingsListResponse;
 import com.bmk.bmkbookings.response.out.ErrorResponse;
@@ -92,17 +94,18 @@ public class BookingController {
     @PostMapping("createBooking")
     public ResponseEntity createBooking(@RequestHeader String token, @RequestBody String param) throws UnauthorizedUserException, JsonProcessingException {
         String apiType = ApiTypes.delta.toString();
-        try {
+    //    try {
             Long clientId = restClient.authorize(token, apiType);
 
             Booking booking = new ObjectMapper().readValue(param, Booking.class);
             booking.setClientId(clientId);
             booking.setStatus(BookingStatus.pending.toString());
             booking = bookingService.addNewBooking(booking);
+            restClient.sendNotification(booking);
             return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", booking.getBookingId()));
-        } catch(Exception e){
+/*        } catch(Exception e){
             return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(new ErrorResponse("403", "Unknown error encountered"));
-        }
+        }*/
     }
 
     @PutMapping("client/updateStatus")
