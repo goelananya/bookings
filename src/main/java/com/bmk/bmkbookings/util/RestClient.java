@@ -17,9 +17,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class RestClient {
@@ -56,27 +59,54 @@ public class RestClient {
             logger.info("baseUrl:"+ baseUrl);
             HttpHeaders headers = getHttpHeaders();
             HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
-            DeviceIdResponse deviceIdResponse = restTemplate.exchange(baseUrl, HttpMethod.GET, entity, DeviceIdResponse.class).getBody();
-            if(!deviceIdResponse.getResponseCode().equals("200")) return null;
+            DeviceIdResponse deviceIdResponse;
+            try {
+                deviceIdResponse = restTemplate.exchange(baseUrl, HttpMethod.GET, entity, DeviceIdResponse.class).getBody();
+            } catch (HttpClientErrorException e){
+                return null;
+            }
             String deviceId = deviceIdResponse.getDeviceId();
             logger.info("deviceId:"+ deviceId);
             return deviceId;
     }
 
-    public void sendNotification(Booking booking) throws JsonProcessingException {
-        //try {
+    public void sendBookingNotification(Booking booking) throws JsonProcessingException {
             logger.info("Calling firebase cloud messaging");
-            Notification notification = new Notification("New Booking", new ObjectMapper().writeValueAsString(booking), null);
-            FcmRequest fcmRequest = new FcmRequest(getDeviceId(booking.getMerchantId()), null, notification);
+            String imageUrl = "https://images.pexels.com/photos/1319460/pexels-photo-1319460.jpeg?auto=compress&cs=tinysrgb&h=750&w=1260";
+            String deviceId = getDeviceId(booking.getMerchantId());
+            if(deviceId==null) {
+                logger.info("Unable to send notification as device id not registered for"+booking);
+                return;
+            }
+            Map<String, String> map = new HashMap<>();
+            map.put(booking.getBookingId().toString(), new ObjectMapper().writeValueAsString(booking));
+            Notification notification = new Notification("New Booking", "Launch application to accept the booking", imageUrl);
+            FcmRequest fcmRequest = new FcmRequest(deviceId, map, notification);
             String baseUrl = "https://fcm.googleapis.com/fcm/send";
             HttpHeaders headers = getHttpHeaders();
             headers.set("Authorization", "Bearer "+fcmKey);
             HttpEntity<String> entity = new HttpEntity<>(new ObjectMapper().writeValueAsString(fcmRequest), headers);
             Object object = restTemplate.exchange(baseUrl, HttpMethod.POST, entity, Object.class).getBody();
             logger.info("fcm connection success"+ object);
-        /*} catch (Exception e){
-            logger.info("Something went wrong in fcm");
-        }*/
+    }
+
+    public void sendStatusUpdateNotification(Booking booking, UserType toUserType) throws JsonProcessingException {
+        logger.info("Calling firebase cloud messaging");
+        String imageUrl = "https://images.pexels.com/photos/1319460/pexels-photo-1319460.jpeg?auto=compress&cs=tinysrgb&h=750&w=1260";
+        String deviceId = toUserType.equals(UserType.merchant)?getDeviceId(booking.getMerchantId()):getDeviceId(booking.getClientId());
+
+        if(deviceId==null) {
+            logger.info("Unable to send notification as device id not registered for"+booking);
+            return;
+        }
+        Notification notification = new Notification("Booking Status Updated", "Status updated for booking id ".concat(booking.getBookingId().toString()), imageUrl);
+        FcmRequest fcmRequest = new FcmRequest(deviceId, null, notification);
+        String baseUrl = "https://fcm.googleapis.com/fcm/send";
+        HttpHeaders headers = getHttpHeaders();
+        headers.set("Authorization", "Bearer "+fcmKey);
+        HttpEntity<String> entity = new HttpEntity<>(new ObjectMapper().writeValueAsString(fcmRequest), headers);
+        Object object = restTemplate.exchange(baseUrl, HttpMethod.POST, entity, Object.class).getBody();
+        logger.info("fcm connection success"+ object);
     }
 
     public static HttpHeaders getHttpHeaders(){

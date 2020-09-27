@@ -2,17 +2,16 @@ package com.bmk.bmkbookings.controller;
 
 
 import com.bmk.bmkbookings.bo.Booking;
-import com.bmk.bmkbookings.bo.Notification;
 import com.bmk.bmkbookings.exception.InvalidStatusException;
 import com.bmk.bmkbookings.exception.UnauthorizedUserException;
 import com.bmk.bmkbookings.request.in.UpdateBookingStatus;
-import com.bmk.bmkbookings.request.out.FcmRequest;
 import com.bmk.bmkbookings.response.out.BookingSuccessResponse;
 import com.bmk.bmkbookings.response.out.BookingsListResponse;
 import com.bmk.bmkbookings.response.out.ErrorResponse;
 import com.bmk.bmkbookings.response.out.GenericResponse;
 import com.bmk.bmkbookings.service.BookingService;
 import com.bmk.bmkbookings.util.RestClient;
+import com.bmk.bmkbookings.util.UserType;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import constants.ApiTypes;
@@ -24,7 +23,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.awt.print.Book;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -101,7 +99,7 @@ public class BookingController {
             booking.setClientId(clientId);
             booking.setStatus(BookingStatus.pending.toString());
             booking = bookingService.addNewBooking(booking);
-            restClient.sendNotification(booking);
+            restClient.sendBookingNotification(booking);
             return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", booking.getBookingId()));
 /*        } catch(Exception e){
             return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(new ErrorResponse("403", "Unknown error encountered"));
@@ -119,6 +117,7 @@ public class BookingController {
             if(!booking.getClientId().equals(clientId))  throw new UnauthorizedUserException();
             booking.setStatus(bookingStatus.getStatus());
             bookingService.addNewBooking(booking);
+            restClient.sendStatusUpdateNotification(booking, UserType.merchant);
             return ResponseEntity.ok(new GenericResponse("200", "Success", booking));
         } catch (InvalidStatusException e){
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("403", "Invalid Status"));
@@ -140,6 +139,7 @@ public class BookingController {
             if(!booking.getMerchantId().equals(merchantId)) throw new UnauthorizedUserException();
             booking.setStatus(bookingStatus.getStatus());
             bookingService.addNewBooking(booking);
+            restClient.sendStatusUpdateNotification(booking, UserType.client);
             return ResponseEntity.ok(new GenericResponse("200", "Success", booking));
         } catch (UnauthorizedUserException e){
           return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("403", "User cannot edit this booking"));
