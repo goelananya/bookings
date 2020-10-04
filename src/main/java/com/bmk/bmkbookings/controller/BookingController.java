@@ -46,13 +46,13 @@ public class BookingController {
     }
 
     @GetMapping("/merchant")
-    public ResponseEntity getBookingsForMerchant(@RequestHeader String token) throws UnauthorizedUserException {
+    public ResponseEntity getBookingsForMerchant(@RequestHeader String token){
         String apiType = ApiTypes.gamma.toString();
         try {
             Long merchantId = restClient.authorize(token, apiType);
             return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingService.getBookingsForMerchant(merchantId)));
-        } catch (Exception e){
-            return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(new ErrorResponse("403", "Unknown error encountered"));
+        } catch (UnauthorizedUserException e){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
         }
     }
 
@@ -62,8 +62,8 @@ public class BookingController {
         try {
             Long clientId = restClient.authorize(token, apiType);
             return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingService.getBookingForClient(clientId)));
-        } catch(Exception e){
-            return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(new ErrorResponse("403", "Unknown error encountered"));
+        } catch (UnauthorizedUserException e){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
         }
     }
 
@@ -73,8 +73,8 @@ public class BookingController {
         try {
             restClient.authorize(token, apiType);
             return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingService.getAllBookings()));
-        } catch (Exception e){
-            return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(new ErrorResponse("403", "Unknown error encountered"));
+        } catch (UnauthorizedUserException e){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
         }
     }
 
@@ -84,15 +84,15 @@ public class BookingController {
         try {
             restClient.authorize(token, apiType);
             return ResponseEntity.ok(new GenericResponse("200", "Success", bookingService.findByBookingId(bookingId)));
-        } catch(Exception e){
-            return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(new ErrorResponse("403", "Unknown error encountered"));
+        } catch (UnauthorizedUserException e){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
         }
     }
 
     @PostMapping("createBooking")
     public ResponseEntity createBooking(@RequestHeader String token, @RequestBody String param) throws UnauthorizedUserException, JsonProcessingException {
         String apiType = ApiTypes.delta.toString();
-    //    try {
+        try {
             Long clientId = restClient.authorize(token, apiType);
 
             Booking booking = new ObjectMapper().readValue(param, Booking.class);
@@ -101,9 +101,9 @@ public class BookingController {
             booking = bookingService.addNewBooking(booking);
             restClient.sendBookingNotification(booking);
             return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", booking.getBookingId()));
-/*        } catch(Exception e){
-            return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(new ErrorResponse("403", "Unknown error encountered"));
-        }*/
+        }catch(UnauthorizedUserException e){
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
+            }
     }
 
     @PutMapping("client/updateStatus")
@@ -119,17 +119,13 @@ public class BookingController {
             bookingService.addNewBooking(booking);
             restClient.sendStatusUpdateNotification(booking, UserType.merchant);
             return ResponseEntity.ok(new GenericResponse("200", "Success", booking));
-        } catch (InvalidStatusException e){
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("403", "Invalid Status"));
-        } catch (UnauthorizedUserException e){
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("403", "User cannot edit this booking"));
-        } catch(Exception e){
-            return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(new ErrorResponse("424", "Unknown error encountered"));
+        } catch (InvalidStatusException| UnauthorizedUserException| JsonProcessingException e){
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("400", e.getMessage()));
         }
     }
 
     @PutMapping("merchant/updateStatus")
-    public ResponseEntity updateBooking(@RequestHeader String token, @RequestBody String param) throws UnauthorizedUserException, JsonProcessingException {
+    public ResponseEntity updateBooking(@RequestHeader String token, @RequestBody String param){
         String apiType = ApiTypes.gamma.toString();
         try {
             Long merchantId = restClient.authorize(token, apiType);
@@ -141,12 +137,8 @@ public class BookingController {
             bookingService.addNewBooking(booking);
             restClient.sendStatusUpdateNotification(booking, UserType.client);
             return ResponseEntity.ok(new GenericResponse("200", "Success", booking));
-        } catch (UnauthorizedUserException e){
-          return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("403", "User cannot edit this booking"));
-        } catch (InvalidStatusException e){
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("403", "Invalid Status"));
-        } catch(Exception e){
-            return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(new ErrorResponse("424", "Unknown error encountered"));
+        } catch (InvalidStatusException| UnauthorizedUserException| JsonProcessingException e){
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("400", e.getMessage()));
         }
     }
 }
