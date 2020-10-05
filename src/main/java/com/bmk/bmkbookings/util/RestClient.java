@@ -6,8 +6,14 @@ import com.bmk.bmkbookings.exception.UnauthorizedUserException;
 import com.bmk.bmkbookings.request.out.FcmRequest;
 import com.bmk.bmkbookings.response.in.AuthResponse;
 import com.bmk.bmkbookings.response.in.DeviceIdResponse;
+import com.bmk.bmkbookings.response.in.PortfolioResponse;
+import com.bmk.bmkbookings.response.in.RazorpayCreateOrderId;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.razorpay.Order;
+import com.razorpay.RazorpayClient;
+import com.razorpay.RazorpayException;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +35,9 @@ public class RestClient {
     private final RestTemplate restTemplate;
     private static final Logger logger = LoggerFactory.getLogger(RestClient.class);
     private final static String fcmKey = System.getenv("fcmKey");
+    private static final String razorPayKey = System.getenv("rpkey");
+    private static final String razorPaySecret = System.getenv("rpSec");
+    private static final String superuserToken = System.getenv("superuserToken");
 
     @Autowired
     public RestClient(RestTemplateBuilder restTemplateBuilder) {
@@ -39,9 +48,7 @@ public class RestClient {
         try {
             logger.info("Calling authorize service");
             String baseUrl = "https://bmkauth.herokuapp.com/api/v1/user/authorize";
-            HttpHeaders headers = new HttpHeaders();
-            headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpHeaders headers = getHttpHeaders();
             headers.set("token", jwt);
             headers.set("apiType", apiType);
             HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
@@ -114,5 +121,32 @@ public class RestClient {
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
         headers.setContentType(MediaType.APPLICATION_JSON);
         return headers;
+    }
+
+    public RazorpayCreateOrderId createOrder(int amount, Long orderId) {
+        try {
+            logger.info(amount+" "+orderId);
+            JSONObject orderRequest = new JSONObject();
+            orderRequest.put("amount", amount); // amount in the smallest currency unit
+            orderRequest.put("currency", "INR");
+            orderRequest.put("receipt", orderId.toString());
+            RazorpayClient razorpayClient = new RazorpayClient(razorPayKey, razorPaySecret);
+            Order order = razorpayClient.Orders.create(orderRequest);
+            System.out.println(order);
+            return new ObjectMapper().readValue(order.toString(), RazorpayCreateOrderId.class);
+        } catch (RazorpayException | JsonProcessingException e) {
+            System.out.println(e.getMessage());
+            return null;
+        }
+    }
+
+    public PortfolioResponse getPortfolio(Long merchantId) {
+        HttpHeaders headers = getHttpHeaders();
+        headers.set("token", superuserToken);
+        String url = "http://localhost:8090/api/v1/portfolio?merchantId="+merchantId+"&internal=true";
+        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+        PortfolioResponse portfolioResponse = restTemplate.exchange(url, HttpMethod.GET, entity, PortfolioResponse.class).getBody();
+        logger.info(portfolioResponse.getMessage());
+        return portfolioResponse;
     }
 }

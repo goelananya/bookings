@@ -2,15 +2,22 @@ package com.bmk.bmkbookings.controller;
 
 
 import com.bmk.bmkbookings.bo.Booking;
+import com.bmk.bmkbookings.bo.Invoice;
+import com.bmk.bmkbookings.bo.PaymentBo;
 import com.bmk.bmkbookings.exception.InvalidStatusException;
 import com.bmk.bmkbookings.exception.UnauthorizedUserException;
 import com.bmk.bmkbookings.request.in.UpdateBookingStatus;
+import com.bmk.bmkbookings.response.in.PortfolioResponse;
+import com.bmk.bmkbookings.response.in.RazorpayCreateOrderId;
 import com.bmk.bmkbookings.response.out.BookingSuccessResponse;
 import com.bmk.bmkbookings.response.out.BookingsListResponse;
 import com.bmk.bmkbookings.response.out.ErrorResponse;
 import com.bmk.bmkbookings.response.out.GenericResponse;
 import com.bmk.bmkbookings.service.BookingService;
+import com.bmk.bmkbookings.service.PaymentService;
+import com.bmk.bmkbookings.util.Helper;
 import com.bmk.bmkbookings.util.RestClient;
+import com.bmk.bmkbookings.util.Signature;
 import com.bmk.bmkbookings.util.UserType;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,6 +30,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.SignatureException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -33,12 +41,14 @@ public class BookingController {
     private static final Logger logger = LoggerFactory.getLogger(BookingController.class);
     private final BookingService bookingService;
     private static RestClient restClient;
+    private static PaymentService paymentService;
     private static Set<String> statusSet = new HashSet<>();
 
     @Autowired
-    public BookingController(BookingService bookingService, RestClient restClient){
+    public BookingController(BookingService bookingService, RestClient restClient, PaymentService paymentService){
         this.bookingService = bookingService;
         this.restClient = restClient;
+        this.paymentService = paymentService;
         statusSet.add("cancel");
         statusSet.add("approve");
         statusSet.add("deny");
@@ -93,14 +103,18 @@ public class BookingController {
     public ResponseEntity createBooking(@RequestHeader String token, @RequestBody String param) throws UnauthorizedUserException, JsonProcessingException {
         String apiType = ApiTypes.delta.toString();
         try {
-            Long clientId = restClient.authorize(token, apiType);
-
             Booking booking = new ObjectMapper().readValue(param, Booking.class);
-            booking.setClientId(clientId);
+            booking.setClientId(restClient.authorize(token, apiType));
             booking.setStatus(BookingStatus.pending.toString());
             booking = bookingService.addNewBooking(booking);
+
+            Invoice invoice = Helper.getInvoice(restClient.getPortfolio(booking.getMerchantId()), booking.getServiceIdCsv());
+            String razorpayCreateOrderId = restClient.createOrder((int)(invoice.getTotalAmount()*100), booking.getBookingId()).getId();
+            booking.setRazorpayOrderId(razorpayCreateOrderId);
+            invoice.setInvoiceId(razorpayCreateOrderId);
+            booking = bookingService.addNewBooking(booking);
             restClient.sendBookingNotification(booking);
-            return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", booking.getBookingId()));
+            return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", invoice));
         }catch(UnauthorizedUserException e){
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
             }
@@ -140,5 +154,20 @@ public class BookingController {
         } catch (InvalidStatusException| UnauthorizedUserException| JsonProcessingException e){
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("400", e.getMessage()));
         }
+    }
+
+    @PostMapping("payment")
+    public ResponseEntity payment(@RequestHeader String token,@RequestBody String param) throws UnauthorizedUserException, JsonProcessingException, SignatureException {
+        restClient.authorize(token, "delta");
+        PaymentBo paymentBo = new ObjectMapper().readValue(param, PaymentBo.class);
+        paymentService.addPayment(paymentBo);
+        String generated_signature = new Signature().calculateRFC2104HMAC(paymentBo.getOrderId() + "|" + paymentBo.getRazorpay_payment_id(), "1UlbCzEnbK07ok9XkAgNYYJI");
+
+        if (generated_signature.equals(paymentBo.getRazorpay_signature())) {
+            System.out.println("Payment Success");
+        }       else{
+            System.out.println("Invalid signature");
+        }
+        return null;
     }
 }
