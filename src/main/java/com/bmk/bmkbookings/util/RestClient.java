@@ -47,14 +47,15 @@ public class RestClient {
     public Long authorize(String jwt, String apiType) throws UnauthorizedUserException {
         try {
             logger.info("Calling authorize service");
-            String baseUrl = "https://bmkauth.herokuapp.com/api/v1/user/authorize";
+            /*String baseUrl = "https://bmkauth.herokuapp.com/api/v1/user/authorize";
             HttpHeaders headers = getHttpHeaders();
             headers.set("token", jwt);
             headers.set("apiType", apiType);
             HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
-            AuthResponse authResponse = restTemplate.exchange(baseUrl, HttpMethod.POST, entity, AuthResponse.class).getBody();
-            if(!authResponse.getResponseCode().equals("200")) throw new UnauthorizedUserException();
-            return Long.parseLong(authResponse.getMessage().split(":")[1]);
+            AuthResponse authResponse = restTemplate.exchange(baseUrl, HttpMethod.POST, entity, AuthResponse.class).getBody();*/
+            return Long.parseLong(TokenUtil.getUserId(jwt));
+//            if(!authResponse.getResponseCode().equals("200")) throw new UnauthorizedUserException();
+//            return Long.parseLong(authResponse.getMessage().split(":")[1]);
         } catch (Exception e){
             throw new UnauthorizedUserException();
         }
