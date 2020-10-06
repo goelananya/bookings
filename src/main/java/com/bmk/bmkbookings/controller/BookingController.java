@@ -107,14 +107,8 @@ public class BookingController {
             booking.setClientId(restClient.authorize(token, apiType));
             booking.setStatus(BookingStatus.pending.toString());
             booking = bookingService.addNewBooking(booking);
-
-            Invoice invoice = Helper.getInvoice(restClient.getPortfolio(booking.getMerchantId()), booking.getServiceIdCsv());
-            String razorpayCreateOrderId = restClient.createOrder((int)(invoice.getTotalAmount()*100), booking.getBookingId()).getId();
-            booking.setRazorpayOrderId(razorpayCreateOrderId);
-            invoice.setInvoiceId(razorpayCreateOrderId);
-            booking = bookingService.addNewBooking(booking);
-            restClient.sendBookingNotification(booking);
-            return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", invoice));
+            //restClient.sendBookingNotification(booking);
+            return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", booking));
         }catch(UnauthorizedUserException e){
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
             }
@@ -169,5 +163,16 @@ public class BookingController {
             System.out.println("Invalid signature");
         }
         return null;
+    }
+
+    @GetMapping("orderid")
+    public ResponseEntity getRazorPayOrderId(@RequestHeader String token, @RequestParam Long bookingId) {
+        Booking booking = bookingService.findByBookingId(bookingId).iterator().next();
+        Invoice invoice = Helper.getInvoice(restClient.getPortfolio(booking.getMerchantId()), booking.getServiceIdCsv());
+        String razorpayCreateOrderId = restClient.createOrder((int)(invoice.getTotalAmount()*100), booking.getBookingId()).getId();
+        booking.setRazorpayOrderId(razorpayCreateOrderId);
+        invoice.setInvoiceId(razorpayCreateOrderId);
+        bookingService.addNewBooking(booking);
+        return ResponseEntity.ok(new GenericResponse("200", "Success", invoice));
     }
 }

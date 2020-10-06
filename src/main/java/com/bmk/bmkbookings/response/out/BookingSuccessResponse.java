@@ -1,5 +1,6 @@
 package com.bmk.bmkbookings.response.out;
 
+import com.bmk.bmkbookings.bo.Booking;
 import com.bmk.bmkbookings.bo.Invoice;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,5 +10,5 @@ import lombok.Data;
 public class BookingSuccessResponse {
     String responseCode;
     String responseMessage;
-    Invoice invoice;
+    Booking booking;
 }
