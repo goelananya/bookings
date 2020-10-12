@@ -20,4 +20,5 @@ public class Booking {
     Date date;
     String status;
     String razorpayOrderId;
+    int payableAmount;
 }
