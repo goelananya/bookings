@@ -4,10 +4,12 @@ import com.bmk.bmkbookings.bo.Booking;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.util.List;
+
 @AllArgsConstructor
 @Data
 public class BookingsListResponse {
     String responseCode;
     String message;
-    Iterable<Booking> bookings;
+    List<BookingResponse> bookings;
 }
