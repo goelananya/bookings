@@ -3,6 +3,8 @@ package com.bmk.bmkbookings.util;
 import com.bmk.bmkbookings.bo.Invoice;
 import com.bmk.bmkbookings.response.in.PortfolioItem;
 import com.bmk.bmkbookings.response.in.PortfolioResponse;
+import com.bmk.bmkbookings.response.in.Service;
+import com.bmk.bmkbookings.response.in.User;
 import com.bmk.bmkbookings.response.out.InvoiceItem;
 import lombok.extern.log4j.Log4j2;
 
@@ -33,4 +35,21 @@ public class Helper {
         return invoice;
     }
 
+    public static Map<Long, Service> convertServicesListToMap(Service[] list){
+        Map<Long, Service> map = new HashMap<>();
+        for(Service service: list){
+            map.put(service.getServiceId(), service);
+        }
+        log.info(map);
+        return map;
+    }
+
+    public static Map<Long, User> convertUserListToMap(User[] list) {
+        Map<Long, User> map = new HashMap<>();
+        for(User user: list) {
+            map.put(user.getStaticUserId(), user);
+        }
+        log.info(map);
+        return map;
+    }
 }

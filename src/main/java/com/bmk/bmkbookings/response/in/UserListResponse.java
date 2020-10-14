@@ -7,8 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Service {
-    Long serviceId;
-    Long serviceCategoryId;
-    String service;
+public class UserListResponse {
+    String responseCode;
+    String message;
+    User[] userList;
 }

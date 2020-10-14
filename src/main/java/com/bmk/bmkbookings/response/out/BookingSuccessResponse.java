@@ -10,5 +10,5 @@ import lombok.Data;
 public class BookingSuccessResponse {
     String responseCode;
     String responseMessage;
-    Booking booking;
+    BookingResponse booking;
 }

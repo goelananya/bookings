@@ -4,21 +4,20 @@ package com.bmk.bmkbookings.controller;
 import com.bmk.bmkbookings.bo.Booking;
 import com.bmk.bmkbookings.bo.Invoice;
 import com.bmk.bmkbookings.bo.PaymentBo;
+import com.bmk.bmkbookings.cache.ServicesCache;
+import com.bmk.bmkbookings.cache.UsersCache;
 import com.bmk.bmkbookings.exception.InvalidStatusException;
 import com.bmk.bmkbookings.exception.UnauthorizedUserException;
+import com.bmk.bmkbookings.mapper.BookingsMapper;
 import com.bmk.bmkbookings.request.in.UpdateBookingStatus;
 import com.bmk.bmkbookings.response.in.PortfolioResponse;
 import com.bmk.bmkbookings.response.in.RazorpayCreateOrderId;
-import com.bmk.bmkbookings.response.out.BookingSuccessResponse;
-import com.bmk.bmkbookings.response.out.BookingsListResponse;
-import com.bmk.bmkbookings.response.out.ErrorResponse;
-import com.bmk.bmkbookings.response.out.GenericResponse;
+import com.bmk.bmkbookings.response.in.Service;
+import com.bmk.bmkbookings.response.in.User;
+import com.bmk.bmkbookings.response.out.*;
 import com.bmk.bmkbookings.service.BookingService;
 import com.bmk.bmkbookings.service.PaymentService;
-import com.bmk.bmkbookings.util.Helper;
-import com.bmk.bmkbookings.util.RestClient;
-import com.bmk.bmkbookings.util.Signature;
-import com.bmk.bmkbookings.util.UserType;
+import com.bmk.bmkbookings.util.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import constants.ApiTypes;
@@ -28,11 +27,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.SignatureException;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 @RequestMapping("booking")
 @RestController
@@ -60,7 +59,8 @@ public class BookingController {
         String apiType = ApiTypes.gamma.toString();
         try {
             Long merchantId = restClient.authorize(token, apiType);
-            return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingService.getBookingsForMerchant(merchantId)));
+            List<BookingResponse> bookingResponses = BookingsMapper.mapBookings(bookingService.getBookingsForMerchant(merchantId));
+            return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingResponses));
         } catch (UnauthorizedUserException e){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
         }
@@ -71,7 +71,8 @@ public class BookingController {
         String apiType = ApiTypes.delta.toString();
         try {
             Long clientId = restClient.authorize(token, apiType);
-            return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingService.getBookingForClient(clientId)));
+            List<BookingResponse> bookingResponses = BookingsMapper.mapBookings(bookingService.getBookingForClient(clientId));
+            return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingResponses));
         } catch (UnauthorizedUserException e){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
         }
@@ -82,7 +83,8 @@ public class BookingController {
         String apiType = ApiTypes.beta.toString();
         try {
             restClient.authorize(token, apiType);
-            return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingService.getAllBookings()));
+            List<BookingResponse> bookingResponses = BookingsMapper.mapBookings(bookingService.getAllBookings());
+            return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingResponses));
         } catch (UnauthorizedUserException e){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
         }
@@ -93,7 +95,7 @@ public class BookingController {
         String apiType = ApiTypes.beta.toString();
         try {
             restClient.authorize(token, apiType);
-            return ResponseEntity.ok(new GenericResponse("200", "Success", bookingService.findByBookingId(bookingId)));
+            return ResponseEntity.ok(new GenericResponse("200", "Success", BookingsMapper.mapBookings(bookingService.findByBookingId(bookingId))));
         } catch (UnauthorizedUserException e){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
         }
@@ -107,8 +109,9 @@ public class BookingController {
             booking.setClientId(restClient.authorize(token, apiType));
             booking.setStatus(BookingStatus.pending.toString());
             booking = bookingService.addNewBooking(booking);
-            //restClient.sendBookingNotification(booking);
-            return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", booking));
+            updateBillingAmount(booking);
+            restClient.sendBookingNotification(booking);
+            return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", BookingsMapper.mapBooking(booking)));
         }catch(UnauthorizedUserException e){
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
             }
@@ -126,7 +129,7 @@ public class BookingController {
             booking.setStatus(bookingStatus.getStatus());
             bookingService.addNewBooking(booking);
             restClient.sendStatusUpdateNotification(booking, UserType.merchant);
-            return ResponseEntity.ok(new GenericResponse("200", "Success", booking));
+            return ResponseEntity.ok(new GenericResponse("200", "Success", BookingsMapper.mapBooking(booking)));
         } catch (InvalidStatusException| UnauthorizedUserException| JsonProcessingException e){
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("400", e.getMessage()));
         }
@@ -144,7 +147,7 @@ public class BookingController {
             booking.setStatus(bookingStatus.getStatus());
             bookingService.addNewBooking(booking);
             restClient.sendStatusUpdateNotification(booking, UserType.client);
-            return ResponseEntity.ok(new GenericResponse("200", "Success", booking));
+            return ResponseEntity.ok(new GenericResponse("200", "Success", BookingsMapper.mapBooking(booking)));
         } catch (InvalidStatusException| UnauthorizedUserException| JsonProcessingException e){
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("400", e.getMessage()));
         }
@@ -162,17 +165,16 @@ public class BookingController {
         }       else{
             System.out.println("Invalid signature");
         }
-        return null;
+        return ResponseEntity.ok(new GenericResponse("200", "Success", "Received Payment"));
     }
 
-    @GetMapping("orderid")
-    public ResponseEntity getRazorPayOrderId(@RequestHeader String token, @RequestParam Long bookingId) {
-        Booking booking = bookingService.findByBookingId(bookingId).iterator().next();
+    @Async
+    public void updateBillingAmount(Booking booking){
         Invoice invoice = Helper.getInvoice(restClient.getPortfolio(booking.getMerchantId()), booking.getServiceIdCsv());
-        String razorpayCreateOrderId = restClient.createOrder((int)(invoice.getTotalAmount()*100), booking.getBookingId()).getId();
+        booking.setPayableAmount((int)invoice.getTotalAmount()*100);
+        String razorpayCreateOrderId = restClient.createOrder(booking.getPayableAmount(), booking.getBookingId()).getId();
         booking.setRazorpayOrderId(razorpayCreateOrderId);
         invoice.setInvoiceId(razorpayCreateOrderId);
         bookingService.addNewBooking(booking);
-        return ResponseEntity.ok(new GenericResponse("200", "Success", invoice));
     }
 }

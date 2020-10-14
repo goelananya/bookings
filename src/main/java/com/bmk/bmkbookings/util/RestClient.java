@@ -2,12 +2,11 @@ package com.bmk.bmkbookings.util;
 
 import com.bmk.bmkbookings.bo.Booking;
 import com.bmk.bmkbookings.bo.Notification;
+import com.bmk.bmkbookings.cache.ServicesCache;
+import com.bmk.bmkbookings.cache.UsersCache;
 import com.bmk.bmkbookings.exception.UnauthorizedUserException;
 import com.bmk.bmkbookings.request.out.FcmRequest;
-import com.bmk.bmkbookings.response.in.AuthResponse;
-import com.bmk.bmkbookings.response.in.DeviceIdResponse;
-import com.bmk.bmkbookings.response.in.PortfolioResponse;
-import com.bmk.bmkbookings.response.in.RazorpayCreateOrderId;
+import com.bmk.bmkbookings.response.in.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.razorpay.Order;
@@ -22,12 +21,14 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -78,6 +79,7 @@ public class RestClient {
             return deviceId;
     }
 
+    @Async
     public void sendBookingNotification(Booking booking) throws JsonProcessingException {
             logger.info("Calling firebase cloud messaging");
             String imageUrl = "https://images.pexels.com/photos/1319460/pexels-photo-1319460.jpeg?auto=compress&cs=tinysrgb&h=750&w=1260";
@@ -149,5 +151,34 @@ public class RestClient {
         PortfolioResponse portfolioResponse = restTemplate.exchange(url, HttpMethod.GET, entity, PortfolioResponse.class).getBody();
         logger.info(portfolioResponse.getMessage());
         return portfolioResponse;
+    }
+
+    public void getServices() {
+        HttpHeaders headers = getHttpHeaders();
+        headers.set("token", superuserToken);
+        String url = "https://bmkservicesendpoints.herokuapp.com/api/v1/services/all";
+        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+        ServicesResponse servicesResponse = restTemplate.exchange(url, HttpMethod.GET, entity, ServicesResponse.class).getBody();
+        logger.info(servicesResponse.getData().toString());
+        ServicesCache.map = Helper.convertServicesListToMap(servicesResponse.getData());
+    }
+
+    public String getUsername(Long userId) {
+        HttpHeaders headers = getHttpHeaders();
+        headers.set("token", "");
+        String url = "https://bmkauth.herokuapp.com/api/v1/user/details?userId=".concat(userId.toString());
+        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+        UserInfoResponse userInfoResponse = restTemplate.exchange(url, HttpMethod.GET, entity, UserInfoResponse.class).getBody();
+        return userInfoResponse.getMessage().getName();
+    }
+
+    public void getUsers() {
+        HttpHeaders headers = getHttpHeaders();
+        headers.set("token", superuserToken);
+        String url = "http://localhost:8092/api/v1/user/all";
+        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+        UserListResponse userList= restTemplate.exchange(url, HttpMethod.GET, entity, UserListResponse.class).getBody();
+        logger.info(userList.getUserList().toString());
+        UsersCache.map = Helper.convertUserListToMap(userList.getUserList());
     }
 }
