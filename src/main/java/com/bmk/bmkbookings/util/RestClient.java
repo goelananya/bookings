@@ -175,7 +175,7 @@ public class RestClient {
     public void getUsers() {
         HttpHeaders headers = getHttpHeaders();
         headers.set("token", superuserToken);
-        String url = "http://localhost:8092/api/v1/user/all";
+        String url = "https://bmkauth.herokuapp.com/api/v1/user/all";
         HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
         UserListResponse userList= restTemplate.exchange(url, HttpMethod.GET, entity, UserListResponse.class).getBody();
         logger.info(userList.getUserList().toString());
