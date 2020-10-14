@@ -19,4 +19,5 @@ public class Booking {
     String serviceIdCsv;
     Date date;
     String status;
+    String razorpayOrderId;
 }
