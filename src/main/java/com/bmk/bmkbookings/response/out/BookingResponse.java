@@ -11,7 +11,7 @@ import java.util.List;
 public class BookingResponse {
     Long bookingId;
     String clientName;
-    String merchantName;
+    MerchantResponse merchant;
     List<Service> services;
     Date date;
     String status;

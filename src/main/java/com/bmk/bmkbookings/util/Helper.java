@@ -6,6 +6,7 @@ import com.bmk.bmkbookings.response.in.PortfolioResponse;
 import com.bmk.bmkbookings.response.in.Service;
 import com.bmk.bmkbookings.response.in.User;
 import com.bmk.bmkbookings.response.out.InvoiceItem;
+import com.bmk.bmkbookings.response.out.MerchantResponse;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
@@ -44,10 +45,19 @@ public class Helper {
         return map;
     }
 
-    public static Map<Long, User> convertUserListToMap(User[] list) {
-        Map<Long, User> map = new HashMap<>();
+    public static Map<Long, String> convertUserListToMap(User[] list) {
+        Map<Long, String> map = new HashMap<>();
         for(User user: list) {
-            map.put(user.getStaticUserId(), user);
+            map.put(user.getStaticUserId(), user.getName());
+        }
+        log.info(map);
+        return map;
+    }
+
+    public static Map<Long, MerchantResponse> convertMerchantListToMap(MerchantResponse[] merchantResponses) {
+        Map<Long, MerchantResponse> map = new HashMap<>();
+        for(MerchantResponse merchantResponse: merchantResponses) {
+                map.put(merchantResponse.getMerchantId(), merchantResponse);
         }
         log.info(map);
         return map;

@@ -1,11 +1,13 @@
 package com.bmk.bmkbookings.mapper;
 
 import com.bmk.bmkbookings.bo.Booking;
+import com.bmk.bmkbookings.cache.MerchantCache;
 import com.bmk.bmkbookings.cache.ServicesCache;
 import com.bmk.bmkbookings.cache.UsersCache;
 import com.bmk.bmkbookings.response.in.Service;
 import com.bmk.bmkbookings.response.in.User;
 import com.bmk.bmkbookings.response.out.BookingResponse;
+import com.bmk.bmkbookings.response.out.MerchantResponse;
 import com.bmk.bmkbookings.util.StringUtil;
 
 import java.util.ArrayList;
@@ -14,8 +16,9 @@ import java.util.Map;
 
 public class BookingsMapper {
 
-    static Map<Long, User> usersCache = UsersCache.map;
+    static Map<Long, String> usersCache = UsersCache.map;
     static Map<Long, Service> servicesCache = ServicesCache.map;
+    static Map<Long, MerchantResponse> merchantCache = MerchantCache.map;
 
     public static List<BookingResponse> mapBookings(Iterable<Booking> bookings) {
 
@@ -30,8 +33,8 @@ public class BookingsMapper {
 
     public static BookingResponse mapBooking(Booking booking) {
         BookingResponse bookingResponse = new BookingResponse(booking);
-        bookingResponse.setClientName(usersCache.get(booking.getClientId()).getName());
-        bookingResponse.setMerchantName(usersCache.get(booking.getMerchantId()).getName());
+        bookingResponse.setClientName(usersCache.get(booking.getClientId()));
+        bookingResponse.setMerchant(merchantCache.get(booking.getMerchantId()));
         List<Service> services = new ArrayList<>();
         for(String s: booking.getServiceIdCsv().split(",")) {
             if(StringUtil.isEmpty(s))   break;

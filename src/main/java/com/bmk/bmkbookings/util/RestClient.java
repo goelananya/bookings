@@ -2,6 +2,7 @@ package com.bmk.bmkbookings.util;
 
 import com.bmk.bmkbookings.bo.Booking;
 import com.bmk.bmkbookings.bo.Notification;
+import com.bmk.bmkbookings.cache.MerchantCache;
 import com.bmk.bmkbookings.cache.ServicesCache;
 import com.bmk.bmkbookings.cache.UsersCache;
 import com.bmk.bmkbookings.exception.UnauthorizedUserException;
@@ -180,5 +181,15 @@ public class RestClient {
         UserListResponse userList= restTemplate.exchange(url, HttpMethod.GET, entity, UserListResponse.class).getBody();
         logger.info(userList.getUserList().toString());
         UsersCache.map = Helper.convertUserListToMap(userList.getUserList());
+    }
+
+    public void getAllMerchants() {
+        HttpHeaders headers = getHttpHeaders();
+        headers.set("token", superuserToken);
+        String url = "https://bmkmerchant.herokuapp.com/merchant/all";
+        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+        MerchantResponseList merchantResponseList= restTemplate.exchange(url, HttpMethod.GET, entity, MerchantResponseList.class).getBody();
+        logger.info(merchantResponseList.getMessage().toString());
+        MerchantCache.map = Helper.convertMerchantListToMap(merchantResponseList.getMessage());
     }
 }
