@@ -111,6 +111,7 @@ public class BookingController {
             booking = bookingService.addNewBooking(booking);
             updateBillingAmount(booking);
             restClient.sendBookingNotification(booking);
+
             return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", BookingsMapper.mapBooking(booking)));
         }catch(UnauthorizedUserException e){
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
@@ -161,11 +162,11 @@ public class BookingController {
         String generated_signature = new Signature().calculateRFC2104HMAC(paymentBo.getOrderId() + "|" + paymentBo.getRazorpay_payment_id(), "1UlbCzEnbK07ok9XkAgNYYJI");
 
         if (generated_signature.equals(paymentBo.getRazorpay_signature())) {
-            System.out.println("Payment Success");
+            return ResponseEntity.ok(new GenericResponse("200", "Success", "Received Payment"));
         }       else{
-            System.out.println("Invalid signature");
+            return ResponseEntity.badRequest().body(new GenericResponse("400", "Failed", "No Payment Received"));
         }
-        return ResponseEntity.ok(new GenericResponse("200", "Success", "Received Payment"));
+
     }
 
     @Async
