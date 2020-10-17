@@ -7,6 +7,7 @@ import com.bmk.bmkbookings.bo.PaymentBo;
 import com.bmk.bmkbookings.cache.ServicesCache;
 import com.bmk.bmkbookings.cache.UsersCache;
 import com.bmk.bmkbookings.exception.InvalidStatusException;
+import com.bmk.bmkbookings.exception.ServiceNotAvailableException;
 import com.bmk.bmkbookings.exception.UnauthorizedUserException;
 import com.bmk.bmkbookings.mapper.BookingsMapper;
 import com.bmk.bmkbookings.request.in.UpdateBookingStatus;
@@ -102,7 +103,7 @@ public class BookingController {
     }
 
     @PostMapping("createBooking")
-    public ResponseEntity createBooking(@RequestHeader String token, @RequestBody String param) throws UnauthorizedUserException, JsonProcessingException {
+    public ResponseEntity createBooking(@RequestHeader String token, @RequestBody String param){
         String apiType = ApiTypes.delta.toString();
         try {
             Booking booking = new ObjectMapper().readValue(param, Booking.class);
@@ -111,9 +112,8 @@ public class BookingController {
             booking = bookingService.addNewBooking(booking);
             updateBillingAmount(booking);
             restClient.sendBookingNotification(booking);
-
-            return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", BookingsMapper.mapBooking(booking)));
-        }catch(UnauthorizedUserException e){
+            return ResponseEntity.ok(new GenericResponse("200", "Success", BookingsMapper.mapBooking(booking)));
+        }catch(UnauthorizedUserException| ServiceNotAvailableException| JsonProcessingException e){
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
             }
     }
@@ -170,7 +170,7 @@ public class BookingController {
     }
 
     @Async
-    public void updateBillingAmount(Booking booking){
+    public void updateBillingAmount(Booking booking) throws ServiceNotAvailableException {
         Invoice invoice = Helper.getInvoice(restClient.getPortfolio(booking.getMerchantId()), booking.getServiceIdCsv());
         booking.setPayableAmount((int)invoice.getTotalAmount()*100);
         String razorpayCreateOrderId = restClient.createOrder(booking.getPayableAmount(), booking.getBookingId()).getId();

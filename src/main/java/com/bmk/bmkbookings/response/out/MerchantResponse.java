@@ -13,8 +13,8 @@ public class MerchantResponse {
     String merchantName;
     String merchantType;
     String phone;
-    double distance;
     ImageResponse[] imageArr;
     String email;
+    LocationBo location;
     String phoneNumber;
 }
