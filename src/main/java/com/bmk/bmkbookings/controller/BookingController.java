@@ -112,7 +112,7 @@ public class BookingController {
             booking = bookingService.addNewBooking(booking);
             updateBillingAmount(booking);
             restClient.sendBookingNotification(booking);
-            return ResponseEntity.ok(new GenericResponse("200", "Success", BookingsMapper.mapBooking(booking)));
+            return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", BookingsMapper.mapBooking(booking)));
         }catch(UnauthorizedUserException| ServiceNotAvailableException| JsonProcessingException e){
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
             }
