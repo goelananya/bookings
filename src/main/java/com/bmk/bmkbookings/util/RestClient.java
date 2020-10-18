@@ -18,10 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -39,7 +36,9 @@ public class RestClient {
     private final static String fcmKey = System.getenv("fcmKey");
     private static final String razorPayKey = System.getenv("rpkey");
     private static final String razorPaySecret = System.getenv("rpSec");
-    private static final String superuserToken = System.getenv("superuserToken");
+    private static String superuserToken;
+    private static final String superuserKey = System.getenv("superuserKey");
+    private static final String superuserValue = System.getenv("superuserValue");
 
     @Autowired
     public RestClient(RestTemplateBuilder restTemplateBuilder) {
@@ -145,6 +144,7 @@ public class RestClient {
     }
 
     public PortfolioResponse getPortfolio(Long merchantId) {
+        refreshToken();
         HttpHeaders headers = getHttpHeaders();
         headers.set("token", superuserToken);
         String url = "https://bmkservicesendpoints.herokuapp.com/api/v1/portfolio?merchantId="+merchantId+"&internal=true";
@@ -155,6 +155,7 @@ public class RestClient {
     }
 
     public void getServices() {
+        refreshToken();
         HttpHeaders headers = getHttpHeaders();
         headers.set("token", superuserToken);
         String url = "https://bmkservicesendpoints.herokuapp.com/api/v1/services/all";
@@ -174,6 +175,7 @@ public class RestClient {
     }
 
     public void getUsers() {
+        refreshToken();
         HttpHeaders headers = getHttpHeaders();
         headers.set("token", superuserToken);
         String url = "https://bmkauth.herokuapp.com/api/v1/user/all";
@@ -184,6 +186,7 @@ public class RestClient {
     }
 
     public void getAllMerchants() {
+        refreshToken();
         HttpHeaders headers = getHttpHeaders();
         headers.set("token", superuserToken);
         String url = "https://bmkmerchant.herokuapp.com/merchant/all";
@@ -191,5 +194,18 @@ public class RestClient {
         MerchantResponseList merchantResponseList= restTemplate.exchange(url, HttpMethod.GET, entity, MerchantResponseList.class).getBody();
         logger.info(merchantResponseList.getMessage().toString());
         MerchantCache.map = Helper.convertMerchantListToMap(merchantResponseList.getMessage());
+    }
+
+    public void refreshToken() {
+        logger.info("refreshing token");
+        HttpHeaders headers = getHttpHeaders();
+        headers.set("token", "");
+        String url = "https://bmkauth.herokuapp.com/api/v1/user/singin";
+        JSONObject orderRequest = new JSONObject();
+        orderRequest.put("email", superuserKey);
+        orderRequest.put("password", superuserValue);
+        HttpEntity<String> entity = new HttpEntity<>(orderRequest.toString(), headers);
+        LoginResponse loginResponse = restTemplate.exchange(url, HttpMethod.POST, entity, LoginResponse.class).getBody();
+        superuserToken = loginResponse.getToken();
     }
 }
