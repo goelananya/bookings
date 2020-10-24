@@ -141,6 +141,11 @@ public class BookingController {
 
     }
 
+    @GetMapping("ping")
+    public String ping() {
+        return "Hello";
+    }
+
     @Async
     public void updateBillingAmount(Booking booking) throws ServiceNotAvailableException {
         Invoice invoice = Helper.getInvoice(restClient.getPortfolio(booking.getMerchantId()), booking.getServiceIdCsv());
