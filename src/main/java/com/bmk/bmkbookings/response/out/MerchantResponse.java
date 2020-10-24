@@ -17,4 +17,6 @@ public class MerchantResponse {
     String email;
     LocationBo location;
     String phoneNumber;
+    double averageRating;
+    int totalRatings;
 }
