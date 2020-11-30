@@ -1,5 +1,6 @@
 package com.bmk.bmkbookings.bo;
 
+import com.bmk.bmkbookings.enums.BookingStatusEnum;
 import lombok.Data;
 
 import javax.persistence.Entity;
@@ -18,7 +19,7 @@ public class Booking {
     Long merchantId;
     String serviceIdCsv;
     Date date;
-    String status;
+    BookingStatusEnum status;
     String razorpayOrderId;
     int payableAmount;
 }

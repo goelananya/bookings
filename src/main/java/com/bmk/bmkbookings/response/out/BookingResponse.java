@@ -21,7 +21,7 @@ public class BookingResponse {
     public BookingResponse(Booking booking){
         this.bookingId = booking.getBookingId();
         this.date = booking.getDate();
-        this.status = booking.getStatus();
+        this.status = booking.getStatus().getValue();
         this.razorpayOrderId = booking.getRazorpayOrderId();
         this.payableAmount = booking.getPayableAmount();
     }
