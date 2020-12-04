@@ -49,9 +49,8 @@ public class BookingController {
         this.bookingService = bookingService;
         this.restClient = restClient;
         this.paymentService = paymentService;
-        statusSet.add("cancel");
-        statusSet.add("approve");
-        statusSet.add("deny");
+        statusSet.add("accepted");
+        statusSet.add("denied");
         statusSet.add("completed");
     }
 
@@ -155,4 +154,5 @@ public class BookingController {
         invoice.setInvoiceId(razorpayCreateOrderId);
         bookingService.addNewBooking(booking);
     }
+
 }
