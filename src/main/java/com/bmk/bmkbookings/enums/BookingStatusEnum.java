@@ -8,12 +8,12 @@ import lombok.ToString;
 @ToString
 public enum BookingStatusEnum {
 
-    PENDING("Pending"),
-    COMPLETED("Completed"),
-    CANCELLED("Cancelled"),
-    IN_PROGRESS("In Progress"),
-    CONFIRMED("Confirmed"),
-    REQUESTED_CHANGES("Requested Changes");
+    PENDING("pending"),
+    COMPLETED("completed"),
+    CANCELLED("cancelled"),
+    ACCEPTED("accepted"),
+    REQUESTED_CHANGES("requestedChanges"),
+    EXPIRED("expired");
 
     private final String value;
 
