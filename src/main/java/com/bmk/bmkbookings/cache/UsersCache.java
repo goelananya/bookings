@@ -6,5 +6,5 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class UsersCache {
-    public static Map<Long, String> map = new HashMap<>();
+    public static Map<Long, User> map = new HashMap<>();
 }

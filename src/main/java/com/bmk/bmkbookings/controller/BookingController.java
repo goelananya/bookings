@@ -4,21 +4,19 @@ package com.bmk.bmkbookings.controller;
 import com.bmk.bmkbookings.bo.Booking;
 import com.bmk.bmkbookings.bo.Invoice;
 import com.bmk.bmkbookings.bo.PaymentBo;
-import com.bmk.bmkbookings.cache.ServicesCache;
 import com.bmk.bmkbookings.cache.UsersCache;
 import com.bmk.bmkbookings.exception.InvalidStatusException;
 import com.bmk.bmkbookings.exception.ServiceNotAvailableException;
 import com.bmk.bmkbookings.exception.UnauthorizedUserException;
 import com.bmk.bmkbookings.mapper.BookingsMapper;
 import com.bmk.bmkbookings.request.in.UpdateBookingStatus;
-import com.bmk.bmkbookings.response.in.PortfolioResponse;
-import com.bmk.bmkbookings.response.in.RazorpayCreateOrderId;
-import com.bmk.bmkbookings.response.in.Service;
-import com.bmk.bmkbookings.response.in.User;
 import com.bmk.bmkbookings.response.out.*;
 import com.bmk.bmkbookings.service.BookingService;
 import com.bmk.bmkbookings.service.PaymentService;
 import com.bmk.bmkbookings.util.*;
+import com.bmk.bmkbookings.util.MailHelper;
+import com.bmk.bmkbookings.util.RestClient;
+import com.bmk.bmkbookings.util.UserType;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import constants.ApiTypes;
@@ -26,13 +24,15 @@ import constants.BookingStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.SignatureException;
 import java.util.*;
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 @RequestMapping("booking")
 @RestController
@@ -52,6 +52,7 @@ public class BookingController {
         statusSet.add("accepted");
         statusSet.add("denied");
         statusSet.add("completed");
+        statusSet.add("cancelled");
     }
 
     @GetMapping("/merchant")
@@ -86,7 +87,7 @@ public class BookingController {
     }
 
     @PostMapping("createBooking")
-    public ResponseEntity createBooking(@RequestHeader String token, @RequestBody String param) throws JsonProcessingException, UnauthorizedUserException, ServiceNotAvailableException {
+    public ResponseEntity createBooking(@RequestHeader String token, @RequestBody String param) throws IOException, UnauthorizedUserException, ServiceNotAvailableException {
         String apiType = ApiTypes.delta.toString();
         Booking booking = new ObjectMapper().readValue(param, Booking.class);
         booking.setClientId(restClient.authorize(token, apiType));
@@ -94,7 +95,9 @@ public class BookingController {
         booking = bookingService.addNewBooking(booking);
         updateBillingAmount(booking);
         restClient.sendBookingNotification(booking);
-        return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", BookingsMapper.mapBooking(booking)));
+        BookingResponse bookingResponse = BookingsMapper.mapBooking(booking);
+        sendEmail(booking, bookingResponse);
+        return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", bookingResponse));
     }
 
     @PutMapping("client/updateStatus")
@@ -155,4 +158,11 @@ public class BookingController {
         bookingService.addNewBooking(booking);
     }
 
+    @Async
+    public void sendEmail(Booking booking, BookingResponse bookingResponse) throws IOException {
+        logger.info("Start send email");
+        restClient.sendEmail(UsersCache.map.get(booking.getClientId()).getEmail(), "Booking received", MailHelper.setContentForClient(bookingResponse));
+        restClient.sendEmail(UsersCache.map.get(booking.getClientId()).getEmail(), "New Booking", MailHelper.setContentForMerchant(bookingResponse));
+        logger.info("End send email");
+    }
 }
