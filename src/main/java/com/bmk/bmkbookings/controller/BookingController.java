@@ -57,40 +57,34 @@ public class BookingController {
 
     @GetMapping("/merchant")
     public ResponseEntity getBookingsForMerchant(@RequestHeader String token) throws UnauthorizedUserException {
-        String apiType = ApiTypes.gamma.toString();
-        Long merchantId = restClient.authorize(token, apiType);
+        Long merchantId = restClient.authorize(token, "gamma");
         List<BookingResponse> bookingResponses = BookingsMapper.mapBookings(bookingService.getBookingsForMerchant(merchantId));
         return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingResponses));
     }
 
     @GetMapping("/client")
     public ResponseEntity getBookingForClient(@RequestHeader String token) throws UnauthorizedUserException {
-        String apiType = ApiTypes.delta.toString();
-        Long clientId = restClient.authorize(token, apiType);
+        Long clientId = restClient.authorize(token, "delta");
         List<BookingResponse> bookingResponses = BookingsMapper.mapBookings(bookingService.getBookingForClient(clientId));
         return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingResponses));
     }
 
     @GetMapping("/all")
     public ResponseEntity getAllBookings(@RequestHeader String token) throws UnauthorizedUserException {
-        String apiType = ApiTypes.beta.toString();
-        restClient.authorize(token, apiType);
+        restClient.authorize(token, "beta");
         List<BookingResponse> bookingResponses = BookingsMapper.mapBookings(bookingService.getAllBookings());
         return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingResponses));
     }
 
     @GetMapping("/byId")
     public ResponseEntity getBookingById(@RequestHeader String token, @RequestParam Long bookingId) throws UnauthorizedUserException {
-        String apiType = ApiTypes.beta.toString();
-        restClient.authorize(token, apiType);
+        restClient.authorize(token, "beta");
         return ResponseEntity.ok(new GenericResponse("200", "Success", BookingsMapper.mapBookings(bookingService.findByBookingId(bookingId))));
     }
 
     @PostMapping("createBooking")
-    public ResponseEntity createBooking(@RequestHeader String token, @RequestBody String param) throws IOException, UnauthorizedUserException, ServiceNotAvailableException {
-        String apiType = ApiTypes.delta.toString();
-        Booking booking = new ObjectMapper().readValue(param, Booking.class);
-        booking.setClientId(restClient.authorize(token, apiType));
+    public ResponseEntity createBooking(@RequestHeader String token, @RequestBody Booking booking) throws IOException, UnauthorizedUserException, ServiceNotAvailableException {
+        booking.setClientId(restClient.authorize(token, "delta"));
         booking.setStatus(BookingStatus.pending.toString());
         booking = bookingService.addNewBooking(booking);
         updateBillingAmount(booking);
@@ -101,10 +95,8 @@ public class BookingController {
     }
 
     @PutMapping("client/updateStatus")
-    public ResponseEntity updateBookingStatus(@RequestHeader String token, @RequestBody String param) throws InvalidStatusException, UnauthorizedUserException, JsonProcessingException {
-        String apiType = ApiTypes.delta.toString();
-        Long clientId = restClient.authorize(token, apiType);
-        UpdateBookingStatus bookingStatus = new ObjectMapper().readValue(param, UpdateBookingStatus.class);
+    public ResponseEntity updateBookingStatus(@RequestHeader String token, @RequestBody UpdateBookingStatus bookingStatus) throws InvalidStatusException, UnauthorizedUserException, JsonProcessingException {
+        Long clientId = restClient.authorize(token, "delta");
         if (!statusSet.contains(bookingStatus.getStatus())) throw new InvalidStatusException();
         Booking booking = bookingService.findByBookingId(bookingStatus.getBookingId()).iterator().next();
         if (!booking.getClientId().equals(clientId)) throw new UnauthorizedUserException();
@@ -115,10 +107,8 @@ public class BookingController {
     }
 
     @PutMapping("merchant/updateStatus")
-    public ResponseEntity updateBooking(@RequestHeader String token, @RequestBody String param) throws InvalidStatusException, UnauthorizedUserException, JsonProcessingException {
-        String apiType = ApiTypes.gamma.toString();
-        Long merchantId = restClient.authorize(token, apiType);
-        UpdateBookingStatus bookingStatus = new ObjectMapper().readValue(param, UpdateBookingStatus.class);
+    public ResponseEntity updateBooking(@RequestHeader String token, @RequestBody UpdateBookingStatus bookingStatus) throws InvalidStatusException, UnauthorizedUserException, JsonProcessingException {
+        Long merchantId = restClient.authorize(token, "gamma");
         if (!statusSet.contains(bookingStatus.getStatus())) throw new InvalidStatusException();
         Booking booking = bookingService.findByBookingId(bookingStatus.getBookingId()).iterator().next();
         if (!booking.getMerchantId().equals(merchantId)) throw new UnauthorizedUserException();
@@ -129,11 +119,10 @@ public class BookingController {
     }
 
     @PostMapping("payment")
-    public ResponseEntity payment(@RequestHeader String token, @RequestBody String param) throws UnauthorizedUserException, JsonProcessingException, SignatureException {
+    public ResponseEntity payment(@RequestHeader String token, @RequestBody PaymentBo paymentBo) throws UnauthorizedUserException, JsonProcessingException, SignatureException {
         restClient.authorize(token, "delta");
-        PaymentBo paymentBo = new ObjectMapper().readValue(param, PaymentBo.class);
         paymentService.addPayment(paymentBo);
-        String generated_signature = new Signature().calculateRFC2104HMAC(paymentBo.getOrderId() + "|" + paymentBo.getRazorpay_payment_id(), "1UlbCzEnbK07ok9XkAgNYYJI");
+        String generated_signature = new Signature().calculateRFC2104HMAC(paymentBo.getOrderId() + "|" + paymentBo.getRazorpay_payment_id(), System.getenv("rpSec"));
 
         if (generated_signature.equals(paymentBo.getRazorpay_signature())) {
             return ResponseEntity.ok(new GenericResponse("200", "Success", "Received Payment"));
