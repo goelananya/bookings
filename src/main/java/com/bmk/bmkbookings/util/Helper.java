@@ -47,10 +47,10 @@ public class Helper {
         return map;
     }
 
-    public static Map<Long, String> convertUserListToMap(User[] list) {
-        Map<Long, String> map = new HashMap<>();
+    public static Map<Long, User> convertUserListToMap(User[] list) {
+        Map<Long, User> map = new HashMap<>();
         for(User user: list) {
-            map.put(user.getStaticUserId(), user.getName());
+            map.put(user.getStaticUserId(), user);
         }
         log.info(map);
         return map;

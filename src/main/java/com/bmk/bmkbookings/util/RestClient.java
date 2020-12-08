@@ -7,7 +7,11 @@ import com.bmk.bmkbookings.cache.ServicesCache;
 import com.bmk.bmkbookings.cache.UsersCache;
 import com.bmk.bmkbookings.exception.UnauthorizedUserException;
 import com.bmk.bmkbookings.request.out.FcmRequest;
+import com.bmk.bmkbookings.request.out.PostEmail;
 import com.bmk.bmkbookings.response.in.*;
+import com.bmk.bmkbookings.response.in.DeviceIdResponse;
+import com.bmk.bmkbookings.response.in.User;
+import com.bmk.bmkbookings.response.in.UserDetailsResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.razorpay.Order;
@@ -26,7 +30,6 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -48,15 +51,7 @@ public class RestClient {
     public Long authorize(String jwt, String apiType) throws UnauthorizedUserException {
         try {
             logger.info("Calling authorize service");
-            /*String baseUrl = "https://bmkauth.herokuapp.com/api/v1/user/authorize";
-            HttpHeaders headers = getHttpHeaders();
-            headers.set("token", jwt);
-            headers.set("apiType", apiType);
-            HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
-            AuthResponse authResponse = restTemplate.exchange(baseUrl, HttpMethod.POST, entity, AuthResponse.class).getBody();*/
             return Long.parseLong(TokenUtil.getUserId(jwt));
-//            if(!authResponse.getResponseCode().equals("200")) throw new UnauthorizedUserException();
-//            return Long.parseLong(authResponse.getMessage().split(":")[1]);
         } catch (Exception e){
             throw new UnauthorizedUserException();
         }
@@ -83,7 +78,7 @@ public class RestClient {
     public void sendBookingNotification(Booking booking) throws JsonProcessingException {
             logger.info("Calling firebase cloud messaging");
             String imageUrl = "https://images.pexels.com/photos/1319460/pexels-photo-1319460.jpeg?auto=compress&cs=tinysrgb&h=750&w=1260";
-            String deviceId = getDeviceId(booking.getMerchantId());
+            String deviceId = UsersCache.map.get(booking.getMerchantId()).getDeviceId();
             if(deviceId==null) {
                 logger.info("Unable to send notification as device id not registered for"+booking);
                 return;
@@ -117,6 +112,24 @@ public class RestClient {
         HttpEntity<String> entity = new HttpEntity<>(new ObjectMapper().writeValueAsString(fcmRequest), headers);
         Object object = restTemplate.exchange(baseUrl, HttpMethod.POST, entity, Object.class).getBody();
         logger.info("fcm connection success"+ object);
+    }
+
+    public User getUser(Long userId){
+        logger.info("Calling get user info service");
+        String baseUrl = "https://bmkauth.herokuapp.com/api/v1/user/details?userId=".concat(userId.toString());
+        logger.info("baseUrl:"+ baseUrl);
+        HttpHeaders headers = getHttpHeaders();
+        headers.set("token", "");
+        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+        UserDetailsResponse userDetailsResponse;
+        try {
+            userDetailsResponse = restTemplate.exchange(baseUrl, HttpMethod.GET, entity, UserDetailsResponse.class).getBody();
+        } catch (HttpClientErrorException e){
+            return null;
+        }
+        User user = userDetailsResponse.getMessage();
+        logger.info("user :"+ user.toString());
+        return user;
     }
 
     public static HttpHeaders getHttpHeaders(){
@@ -175,7 +188,6 @@ public class RestClient {
     }
 
     public void getUsers() {
-        refreshToken();
         HttpHeaders headers = getHttpHeaders();
         headers.set("token", superuserToken);
         String url = "https://bmkauth.herokuapp.com/api/v1/user/all";
@@ -186,7 +198,6 @@ public class RestClient {
     }
 
     public void getAllMerchants() {
-        refreshToken();
         HttpHeaders headers = getHttpHeaders();
         headers.set("token", superuserToken);
         String url = "https://bmkmerchant.herokuapp.com/merchant/all";
@@ -207,5 +218,14 @@ public class RestClient {
         HttpEntity<String> entity = new HttpEntity<>(orderRequest.toString(), headers);
         LoginResponse loginResponse = restTemplate.exchange(url, HttpMethod.POST, entity, LoginResponse.class).getBody();
         superuserToken = loginResponse.getToken();
+    }
+
+    @Async
+    public void sendEmail(String email, String subject, String emailBody) {
+        HttpHeaders headers = getHttpHeaders();
+        headers.set("token", superuserToken);
+        String url = "https://commonutil.herokuapp.com/email/email";
+        HttpEntity<PostEmail> entity = new HttpEntity<PostEmail>(new PostEmail(email, subject, emailBody), headers);
+        restTemplate.exchange(url, HttpMethod.POST, entity, Object.class);
     }
 }

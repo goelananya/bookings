@@ -16,7 +16,7 @@ import java.util.Map;
 
 public class BookingsMapper {
 
-    static Map<Long, String> usersCache = UsersCache.map;
+    static Map<Long, User> usersCache = UsersCache.map;
     static Map<Long, Service> servicesCache = ServicesCache.map;
     static Map<Long, MerchantResponse> merchantCache = MerchantCache.map;
 
@@ -33,7 +33,7 @@ public class BookingsMapper {
 
     public static BookingResponse mapBooking(Booking booking) {
         BookingResponse bookingResponse = new BookingResponse(booking);
-        bookingResponse.setClientName(usersCache.get(booking.getClientId()));
+        bookingResponse.setClientName(usersCache.get(booking.getClientId()).getName());
         bookingResponse.setMerchant(merchantCache.get(booking.getMerchantId()));
         List<Service> services = new ArrayList<>();
         for(String s: booking.getServiceIdCsv().split(",")) {

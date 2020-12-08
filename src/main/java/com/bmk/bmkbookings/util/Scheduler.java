@@ -30,6 +30,7 @@ public class Scheduler {
             @Override
             public void run() {
                 log.info("running");
+                restClient.refreshToken();
                 restClient.getUsers();
                 restClient.getServices();
                 restClient.getAllMerchants();
