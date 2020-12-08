@@ -162,7 +162,7 @@ public class BookingController {
     public void sendEmail(Booking booking, BookingResponse bookingResponse) throws IOException {
         logger.info("Start send email");
         restClient.sendEmail(UsersCache.map.get(booking.getClientId()).getEmail(), "Booking received", MailHelper.setContentForClient(bookingResponse));
-        restClient.sendEmail(UsersCache.map.get(booking.getClientId()).getEmail(), "New Booking", MailHelper.setContentForMerchant(bookingResponse));
+        restClient.sendEmail(UsersCache.map.get(booking.getMerchantId()).getEmail(), "New Booking", MailHelper.setContentForMerchant(bookingResponse));
         logger.info("End send email");
     }
 }
