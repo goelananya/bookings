@@ -4,8 +4,8 @@ package com.bmk.bmkbookings.controller;
 import com.bmk.bmkbookings.bo.Booking;
 import com.bmk.bmkbookings.bo.Invoice;
 import com.bmk.bmkbookings.bo.PaymentBo;
-import com.bmk.bmkbookings.cache.UsersCache;
 import com.bmk.bmkbookings.exception.InvalidStatusException;
+import com.bmk.bmkbookings.exception.MerchantDoesNotExistException;
 import com.bmk.bmkbookings.exception.ServiceNotAvailableException;
 import com.bmk.bmkbookings.exception.UnauthorizedUserException;
 import com.bmk.bmkbookings.mapper.BookingsMapper;
@@ -18,11 +18,8 @@ import com.bmk.bmkbookings.util.MailHelper;
 import com.bmk.bmkbookings.util.RestClient;
 import com.bmk.bmkbookings.util.UserType;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import constants.ApiTypes;
 import constants.BookingStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
@@ -36,9 +33,9 @@ import java.util.Set;
 
 @RequestMapping("booking")
 @RestController
+@Log4j2
 public class BookingController {
 
-    private static final Logger logger = LoggerFactory.getLogger(BookingController.class);
     private final BookingService bookingService;
     private static RestClient restClient;
     private static PaymentService paymentService;
@@ -83,7 +80,7 @@ public class BookingController {
     }
 
     @PostMapping("createBooking")
-    public ResponseEntity createBooking(@RequestHeader String token, @RequestBody Booking booking) throws IOException, UnauthorizedUserException, ServiceNotAvailableException {
+    public ResponseEntity createBooking(@RequestHeader String token, @RequestBody Booking booking) throws IOException, UnauthorizedUserException, ServiceNotAvailableException, MerchantDoesNotExistException {
         booking.setClientId(restClient.authorize(token, "delta"));
         booking.setStatus(BookingStatus.pending.toString());
         booking = bookingService.addNewBooking(booking);
@@ -119,7 +116,7 @@ public class BookingController {
     }
 
     @PostMapping("payment")
-    public ResponseEntity payment(@RequestHeader String token, @RequestBody PaymentBo paymentBo) throws UnauthorizedUserException, JsonProcessingException, SignatureException {
+    public ResponseEntity payment(@RequestHeader String token, @RequestBody PaymentBo paymentBo) throws UnauthorizedUserException, SignatureException {
         restClient.authorize(token, "delta");
         paymentService.addPayment(paymentBo);
         String generated_signature = new Signature().calculateRFC2104HMAC(paymentBo.getOrderId() + "|" + paymentBo.getRazorpay_payment_id(), System.getenv("rpSec"));
@@ -138,7 +135,7 @@ public class BookingController {
     }
 
     @Async
-    public void updateBillingAmount(Booking booking) throws ServiceNotAvailableException {
+    public void updateBillingAmount(Booking booking) throws ServiceNotAvailableException, MerchantDoesNotExistException {
         Invoice invoice = Helper.getInvoice(restClient.getPortfolio(booking.getMerchantId()), booking.getServiceIdCsv());
         booking.setPayableAmount((int) invoice.getTotalAmount() * 100);
         String razorpayCreateOrderId = restClient.createOrder(booking.getPayableAmount(), booking.getBookingId()).getId();
@@ -149,9 +146,9 @@ public class BookingController {
 
     @Async
     public void sendEmail(Booking booking, BookingResponse bookingResponse) throws IOException {
-        logger.info("Start send email");
-        restClient.sendEmail(UsersCache.map.get(booking.getClientId()).getEmail(), "Booking received", MailHelper.setContentForClient(bookingResponse));
-        restClient.sendEmail(UsersCache.map.get(booking.getMerchantId()).getEmail(), "New Booking", MailHelper.setContentForMerchant(bookingResponse));
-        logger.info("End send email");
+        log.info("Start send email");
+        restClient.sendEmail(restClient.getUser(booking.getClientId()).getEmail(), "Booking received", MailHelper.setContentForClient(bookingResponse));
+        restClient.sendEmail(restClient.getUser(booking.getMerchantId()).getEmail(), "New Booking", MailHelper.setContentForMerchant(bookingResponse));
+        log.info("End send email");
     }
 }

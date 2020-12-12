@@ -2,9 +2,7 @@ package com.bmk.bmkbookings.util;
 
 import com.bmk.bmkbookings.bo.Booking;
 import com.bmk.bmkbookings.bo.Notification;
-import com.bmk.bmkbookings.cache.MerchantCache;
-import com.bmk.bmkbookings.cache.ServicesCache;
-import com.bmk.bmkbookings.cache.UsersCache;
+import com.bmk.bmkbookings.exception.MerchantDoesNotExistException;
 import com.bmk.bmkbookings.exception.UnauthorizedUserException;
 import com.bmk.bmkbookings.request.out.FcmRequest;
 import com.bmk.bmkbookings.request.out.PostEmail;
@@ -12,6 +10,7 @@ import com.bmk.bmkbookings.response.in.*;
 import com.bmk.bmkbookings.response.in.DeviceIdResponse;
 import com.bmk.bmkbookings.response.in.User;
 import com.bmk.bmkbookings.response.in.UserDetailsResponse;
+import com.bmk.bmkbookings.response.out.MerchantResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.razorpay.Order;
@@ -22,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -51,6 +51,7 @@ public class RestClient {
     public Long authorize(String jwt, String apiType) throws UnauthorizedUserException {
         try {
             logger.info("Calling authorize service");
+            TokenUtil.getUserType(jwt).equals(apiType);
             return Long.parseLong(TokenUtil.getUserId(jwt));
         } catch (Exception e){
             throw new UnauthorizedUserException();
@@ -78,7 +79,7 @@ public class RestClient {
     public void sendBookingNotification(Booking booking) throws JsonProcessingException {
             logger.info("Calling firebase cloud messaging");
             String imageUrl = "https://images.pexels.com/photos/1319460/pexels-photo-1319460.jpeg?auto=compress&cs=tinysrgb&h=750&w=1260";
-            String deviceId = UsersCache.map.get(booking.getMerchantId()).getDeviceId();
+            String deviceId = getUser(booking.getMerchantId()).getDeviceId();
             if(deviceId==null) {
                 logger.info("Unable to send notification as device id not registered for"+booking);
                 return;
@@ -95,6 +96,7 @@ public class RestClient {
             logger.info("fcm connection success"+ object);
     }
 
+    @Async
     public void sendStatusUpdateNotification(Booking booking, UserType toUserType) throws JsonProcessingException {
         logger.info("Calling firebase cloud messaging");
         String imageUrl = "https://images.pexels.com/photos/1319460/pexels-photo-1319460.jpeg?auto=compress&cs=tinysrgb&h=750&w=1260";
@@ -114,6 +116,7 @@ public class RestClient {
         logger.info("fcm connection success"+ object);
     }
 
+    @Cacheable("users")
     public User getUser(Long userId){
         logger.info("Calling get user info service");
         String baseUrl = "https://bmkauth.herokuapp.com/api/v1/user/details?userId=".concat(userId.toString());
@@ -131,6 +134,7 @@ public class RestClient {
         logger.info("user :"+ user.toString());
         return user;
     }
+
 
     public static HttpHeaders getHttpHeaders(){
         HttpHeaders headers = new HttpHeaders();
@@ -156,18 +160,25 @@ public class RestClient {
         }
     }
 
-    public PortfolioResponse getPortfolio(Long merchantId) {
+    @Cacheable("portfolios")
+    public PortfolioResponse getPortfolio(Long merchantId) throws MerchantDoesNotExistException {
         refreshToken();
-        HttpHeaders headers = getHttpHeaders();
-        headers.set("token", superuserToken);
-        String url = "https://bmkservicesendpoints.herokuapp.com/api/v1/portfolio?merchantId="+merchantId+"&internal=true";
-        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
-        PortfolioResponse portfolioResponse = restTemplate.exchange(url, HttpMethod.GET, entity, PortfolioResponse.class).getBody();
-        logger.info(portfolioResponse.getMessage());
-        return portfolioResponse;
+        try {
+            HttpHeaders headers = getHttpHeaders();
+            headers.set("token", superuserToken);
+            String url = "https://bmkservicesendpoints.herokuapp.com/api/v1/portfolio?merchantId="+merchantId+"&internal=true";
+            HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+            PortfolioResponse portfolioResponse = restTemplate.exchange(url, HttpMethod.GET, entity, PortfolioResponse.class).getBody();
+            logger.info(portfolioResponse.getMessage());
+            return portfolioResponse;
+        } catch (Exception e) {
+            throw new MerchantDoesNotExistException(merchantId);
+        }
+
     }
 
-    public void getServices() {
+    @Cacheable("services")
+    public com.bmk.bmkbookings.response.in.Service getServices(Long serviceId) {
         refreshToken();
         HttpHeaders headers = getHttpHeaders();
         headers.set("token", superuserToken);
@@ -175,36 +186,18 @@ public class RestClient {
         HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
         ServicesResponse servicesResponse = restTemplate.exchange(url, HttpMethod.GET, entity, ServicesResponse.class).getBody();
         logger.info(servicesResponse.getData().toString());
-        ServicesCache.map = Helper.convertServicesListToMap(servicesResponse.getData());
+         return Helper.convertServicesListToMap(servicesResponse.getData()).get(serviceId);
     }
 
-    public String getUsername(Long userId) {
+    @Cacheable("merchants")
+    public MerchantResponse getMerchantById(Long merchantId) {
         HttpHeaders headers = getHttpHeaders();
         headers.set("token", "");
-        String url = "https://bmkauth.herokuapp.com/api/v1/user/details?userId=".concat(userId.toString());
+        String url = "https://bmkmerchant.herokuapp.com/merchant/profile?merchantId="+merchantId;
         HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
-        UserInfoResponse userInfoResponse = restTemplate.exchange(url, HttpMethod.GET, entity, UserInfoResponse.class).getBody();
-        return userInfoResponse.getMessage().getName();
-    }
-
-    public void getUsers() {
-        HttpHeaders headers = getHttpHeaders();
-        headers.set("token", superuserToken);
-        String url = "https://bmkauth.herokuapp.com/api/v1/user/all";
-        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
-        UserListResponse userList= restTemplate.exchange(url, HttpMethod.GET, entity, UserListResponse.class).getBody();
-        logger.info(userList.getUserList().toString());
-        UsersCache.map = Helper.convertUserListToMap(userList.getUserList());
-    }
-
-    public void getAllMerchants() {
-        HttpHeaders headers = getHttpHeaders();
-        headers.set("token", superuserToken);
-        String url = "https://bmkmerchant.herokuapp.com/merchant/all";
-        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
-        MerchantResponseList merchantResponseList= restTemplate.exchange(url, HttpMethod.GET, entity, MerchantResponseList.class).getBody();
-        logger.info(merchantResponseList.getMessage().toString());
-        MerchantCache.map = Helper.convertMerchantListToMap(merchantResponseList.getMessage());
+        MerchantResponseObject merchantResponseObject= restTemplate.exchange(url, HttpMethod.GET, entity, MerchantResponseObject.class).getBody();
+        logger.info(merchantResponseObject.getMessage().toString());
+        return merchantResponseObject.getMessage();
     }
 
     public void refreshToken() {
