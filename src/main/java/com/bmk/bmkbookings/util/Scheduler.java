@@ -32,5 +32,6 @@ public class Scheduler {
         };
         ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
         service.scheduleAtFixedRate(runnable, 0, 29, TimeUnit.MINUTES);
+        restClient.keepServersAwake();
     }
 }

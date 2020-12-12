@@ -221,4 +221,17 @@ public class RestClient {
         HttpEntity<PostEmail> entity = new HttpEntity<PostEmail>(new PostEmail(email, subject, emailBody), headers);
         restTemplate.exchange(url, HttpMethod.POST, entity, Object.class);
     }
+
+    public void keepServersAwake() {
+        String baseUrl = "https://bmkservicesendpoints.herokuapp.com/api/v1/services/keepAwake";
+        String baseUrll = "https://bmkmerchant.herokuapp.com/feedback/keepAwake";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> entity = new HttpEntity<>("body", headers);
+        String str =  restTemplate.exchange(baseUrl, HttpMethod.GET, entity, String.class).getBody();
+        logger.info("Server Ping:"+str);
+        str = restTemplate.exchange(baseUrll, HttpMethod.GET, entity, String.class).getBody();
+        logger.info("Server Ping:"+str);
+    }
 }
