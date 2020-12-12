@@ -19,7 +19,6 @@ public class BmkBookingsApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(BmkBookingsApplication.class, args);
-		scheduler.refreshServices();
 		scheduler.expireOldBookings();
 	}
 
