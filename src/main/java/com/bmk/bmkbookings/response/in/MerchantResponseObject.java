@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class MerchantResponseList {
+public class MerchantResponseObject {
     String statusCode;
-    MerchantResponse[] message;
+    MerchantResponse message;
 }

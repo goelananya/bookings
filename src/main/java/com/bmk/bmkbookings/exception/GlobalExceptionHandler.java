@@ -35,9 +35,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity internalServerError(Exception e){
+    @ExceptionHandler(MerchantDoesNotExistException.class)
+    public ResponseEntity exceptionHandler(MerchantDoesNotExistException e) {
         logger.info(e);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("500", "Internal Server Error"));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
     }
+
+//    @ExceptionHandler(Exception.class)
+//    public ResponseEntity internalServerError(Exception e){
+//        logger.info(e);
+//        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("500", "Internal Server Error"));
+//    }
 }
