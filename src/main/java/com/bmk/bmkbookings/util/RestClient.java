@@ -225,6 +225,7 @@ public class RestClient {
     public void keepServersAwake() {
         String baseUrl = "https://bmkservicesendpoints.herokuapp.com/api/v1/services/keepAwake";
         String baseUrll = "https://bmkmerchant.herokuapp.com/feedback/keepAwake";
+        refreshToken();
         HttpHeaders headers = new HttpHeaders();
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
         headers.setContentType(MediaType.APPLICATION_JSON);
