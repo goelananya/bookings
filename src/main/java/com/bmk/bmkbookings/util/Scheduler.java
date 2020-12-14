@@ -26,12 +26,13 @@ public class Scheduler {
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                log.info("running");
+                log.info("Checking servers");
                 bookingService.expirePastBookings();
+                restClient.keepServersAwake();
+                log.info("Server Check end");
             }
         };
         ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
         service.scheduleAtFixedRate(runnable, 0, 29, TimeUnit.MINUTES);
-        restClient.keepServersAwake();
     }
 }
