@@ -33,6 +33,6 @@ public class Scheduler {
             }
         };
         ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
-        service.scheduleAtFixedRate(runnable, 0, 29, TimeUnit.MINUTES);
+        service.scheduleAtFixedRate(runnable, 0, 20, TimeUnit.MINUTES);
     }
 }
