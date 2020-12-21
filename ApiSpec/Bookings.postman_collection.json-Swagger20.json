@@ -1,0 +1,360 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "version": "1.0",
+    "title": "Bookings",
+    "contact": {}
+  },
+  "host": "api.bookings.bookmykainchi.com",
+  "basePath": "/booking",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/createBooking": {
+      "post": {
+        "summary": "CreateBooking",
+        "tags": [
+          "Misc"
+        ],
+        "operationId": "CreateBooking",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/CreateBookingRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        }
+      }
+    },
+    "/all": {
+      "get": {
+        "summary": "GetAllBookings",
+        "tags": [
+          "Misc"
+        ],
+        "operationId": "GetAllBookings",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        }
+      }
+    },
+    "/client": {
+      "get": {
+        "summary": "GetClientBookings",
+        "tags": [
+          "Misc"
+        ],
+        "operationId": "GetClientBookings",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        }
+      }
+    },
+    "/merchant": {
+      "get": {
+        "summary": "Get Merchant Bookings",
+        "tags": [
+          "Misc"
+        ],
+        "operationId": "GetMerchantBookings",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        }
+      }
+    },
+    "/client/updateStatus": {
+      "put": {
+        "summary": "UpdateStatus",
+        "tags": [
+          "Misc"
+        ],
+        "operationId": "UpdateStatus",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/UpdateStatusRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        }
+      }
+    },
+    "/merchant/updateStatus": {
+      "put": {
+        "summary": "MerchantUpdateStatus",
+        "tags": [
+          "Misc"
+        ],
+        "operationId": "MerchantUpdateStatus",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/MerchantUpdateStatusRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        }
+      }
+    },
+    "/payment": {
+      "post": {
+        "summary": "Add Payment",
+        "tags": [
+          "Misc"
+        ],
+        "operationId": "AddPayment",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/AddPaymentRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "CreateBookingRequest": {
+      "title": "CreateBookingRequest",
+      "example": {
+        "merchantId": 10,
+        "serviceIdCsv": 2,
+        "date": "2020-08-19T12:59:38.226Z"
+      },
+      "type": "object",
+      "properties": {
+        "merchantId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "serviceIdCsv": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "date": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "merchantId",
+        "serviceIdCsv",
+        "date"
+      ]
+    },
+    "UpdateStatusRequest": {
+      "title": "UpdateStatusRequest",
+      "example": {
+        "bookingId": 39,
+        "status": "cancel"
+      },
+      "type": "object",
+      "properties": {
+        "bookingId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bookingId",
+        "status"
+      ]
+    },
+    "MerchantUpdateStatusRequest": {
+      "title": "MerchantUpdateStatusRequest",
+      "example": {
+        "bookingId": 39,
+        "status": "approve"
+      },
+      "type": "object",
+      "properties": {
+        "bookingId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bookingId",
+        "status"
+      ]
+    },
+    "AddPaymentRequest": {
+      "title": "AddPaymentRequest",
+      "example": {
+        "orderId": "order_Fl4z47BDgeZVph",
+        "razorpay_payment_id": "",
+        "razorpay_order_id": "",
+        "razorpay_signature": ""
+      },
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string"
+        },
+        "razorpay_payment_id": {
+          "type": "string"
+        },
+        "razorpay_order_id": {
+          "type": "string"
+        },
+        "razorpay_signature": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "orderId",
+        "razorpay_payment_id",
+        "razorpay_order_id",
+        "razorpay_signature"
+      ]
+    }
+  },
+  "tags": [
+    {
+      "name": "Misc",
+      "description": ""
+    }
+  ]
+}
