@@ -4,10 +4,7 @@ package com.bmk.bmkbookings.controller;
 import com.bmk.bmkbookings.bo.Booking;
 import com.bmk.bmkbookings.bo.Invoice;
 import com.bmk.bmkbookings.bo.PaymentBo;
-import com.bmk.bmkbookings.exception.InvalidStatusException;
-import com.bmk.bmkbookings.exception.MerchantDoesNotExistException;
-import com.bmk.bmkbookings.exception.ServiceNotAvailableException;
-import com.bmk.bmkbookings.exception.UnauthorizedUserException;
+import com.bmk.bmkbookings.exception.*;
 import com.bmk.bmkbookings.mapper.BookingsMapper;
 import com.bmk.bmkbookings.request.in.UpdateBookingStatus;
 import com.bmk.bmkbookings.response.out.*;
@@ -80,15 +77,17 @@ public class BookingController {
     }
 
     @PostMapping("createBooking")
-    public ResponseEntity createBooking(@RequestHeader String token, @RequestBody Booking booking) throws IOException, UnauthorizedUserException, ServiceNotAvailableException, MerchantDoesNotExistException {
+    public ResponseEntity createBooking(@RequestHeader String token, @RequestBody Booking booking) throws IOException, UnauthorizedUserException, ServiceNotAvailableException, MerchantDoesNotExistException, GenericException, InterruptedException {
         booking.setClientId(restClient.authorize(token, "delta"));
         booking.setStatus(BookingStatus.pending.toString());
-        booking = bookingService.addNewBooking(booking);
-        updateBillingAmount(booking);
+        //TODO: Add validators for this
+        if(booking.getDate()==null) throw new GenericException("Date cannot be empty");
+        bookingService.addNewBooking(booking);
         restClient.sendBookingNotification(booking);
-        BookingResponse bookingResponse = BookingsMapper.mapBooking(booking);
-        sendEmail(booking, bookingResponse);
-        return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", bookingResponse));
+        restClient.sendEmail(booking);
+        updateBillingAmount(booking);
+        log.info("End booking method");
+        return ResponseEntity.ok(new BookingSuccessResponse("200", "Success", BookingsMapper.mapBooking(booking)));
     }
 
     @PutMapping("client/updateStatus")
@@ -136,19 +135,15 @@ public class BookingController {
 
     @Async
     public void updateBillingAmount(Booking booking) throws ServiceNotAvailableException, MerchantDoesNotExistException {
+        Long start = System.currentTimeMillis();
         Invoice invoice = Helper.getInvoice(restClient.getPortfolio(booking.getMerchantId()), booking.getServiceIdCsv());
         booking.setPayableAmount((int) invoice.getTotalAmount() * 100);
-        String razorpayCreateOrderId = restClient.createOrder(booking.getPayableAmount(), booking.getBookingId()).getId();
+        String razorpayCreateOrderId = restClient.createOrder(booking.getPayableAmount(), 0L).getId();
         booking.setRazorpayOrderId(razorpayCreateOrderId);
         invoice.setInvoiceId(razorpayCreateOrderId);
         bookingService.addNewBooking(booking);
+        Long end = System.currentTimeMillis();
+        log.info("Total time for updateBillingAmount:"+(end-start));
     }
 
-    @Async
-    public void sendEmail(Booking booking, BookingResponse bookingResponse) throws IOException {
-        log.info("Start send email");
-        restClient.sendEmail(restClient.getUser(booking.getClientId()).getEmail(), "Booking received", MailHelper.setContentForClient(bookingResponse));
-        restClient.sendEmail(restClient.getUser(booking.getMerchantId()).getEmail(), "New Booking", MailHelper.setContentForMerchant(bookingResponse));
-        log.info("End send email");
-    }
 }

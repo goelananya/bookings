@@ -4,6 +4,7 @@ import com.bmk.bmkbookings.bo.Booking;
 import com.bmk.bmkbookings.repo.BookingRepo;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.awt.print.Book;
@@ -21,7 +22,9 @@ public class BookingService {
         this.bookingRepo = bookingRepo;
     }
 
+    @Async
     public Booking addNewBooking(Booking booking){
+        booking = bookingRepo.save(booking);
         return bookingRepo.save(booking);
     }
 

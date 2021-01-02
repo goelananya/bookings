@@ -41,6 +41,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
     }
 
+    @ExceptionHandler(GenericException.class)
+    public ResponseEntity exceptionHandler(GenericException e) {
+        logger.info(e);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("400", e.getMessage()));
+    }
+
 //    @ExceptionHandler(Exception.class)
 //    public ResponseEntity internalServerError(Exception e){
 //        logger.info(e);
