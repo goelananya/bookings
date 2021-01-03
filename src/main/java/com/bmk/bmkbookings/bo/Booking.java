@@ -6,6 +6,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.validation.constraints.NotNull;
 import java.util.Date;
 
 @Data
@@ -17,6 +18,7 @@ public class Booking {
     Long clientId;
     Long merchantId;
     String serviceIdCsv;
+    @NotNull(message = "Date is mandatory")
     Date date;
     String status;
     String razorpayOrderId;

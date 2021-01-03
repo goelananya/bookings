@@ -89,7 +89,7 @@ public class RestClient {
                 return;
             }
             Map<String, String> map = new HashMap<>();
-            map.put(booking.getBookingId().toString(), new ObjectMapper().writeValueAsString(booking));
+            map.put("Booking", new ObjectMapper().writeValueAsString(booking));
             Notification notification = new Notification("New Booking", "Launch application to accept the booking", imageUrl);
             FcmRequest fcmRequest = new FcmRequest(deviceId, map, notification);
             String baseUrl = "https://fcm.googleapis.com/fcm/send";

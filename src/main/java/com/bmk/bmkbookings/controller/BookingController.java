@@ -22,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.security.SignatureException;
 import java.util.*;
 import java.io.IOException;
@@ -77,12 +78,11 @@ public class BookingController {
     }
 
     @PostMapping("createBooking")
-    public ResponseEntity createBooking(@RequestHeader String token, @RequestBody Booking booking) throws IOException, UnauthorizedUserException, ServiceNotAvailableException, MerchantDoesNotExistException, GenericException, InterruptedException {
+    public ResponseEntity createBooking(@RequestHeader String token, @RequestBody @Valid Booking booking) throws IOException, UnauthorizedUserException, ServiceNotAvailableException, MerchantDoesNotExistException, GenericException, InterruptedException {
+        log.info("here");
         booking.setClientId(restClient.authorize(token, "delta"));
         booking.setStatus(BookingStatus.pending.toString());
-        //TODO: Add validators for this
-        if(booking.getDate()==null) throw new GenericException("Date cannot be empty");
-        bookingService.addNewBooking(booking);
+        //bookingService.addNewBooking(booking);
         restClient.sendBookingNotification(booking);
         restClient.sendEmail(booking);
         updateBillingAmount(booking);

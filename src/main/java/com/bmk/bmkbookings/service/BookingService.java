@@ -23,9 +23,8 @@ public class BookingService {
     }
 
     @Async
-    public Booking addNewBooking(Booking booking){
-        booking = bookingRepo.save(booking);
-        return bookingRepo.save(booking);
+    public void addNewBooking(Booking booking){
+        booking.setBookingId(bookingRepo.save(booking).getBookingId());
     }
 
     public Iterable<Booking> getBookingForClient(Long clientId){
