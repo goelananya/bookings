@@ -10,12 +10,14 @@ import com.bmk.bmkbookings.response.in.*;
 import com.bmk.bmkbookings.response.in.DeviceIdResponse;
 import com.bmk.bmkbookings.response.in.User;
 import com.bmk.bmkbookings.response.in.UserDetailsResponse;
+import com.bmk.bmkbookings.response.out.BookingResponse;
 import com.bmk.bmkbookings.response.out.MerchantResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
+import lombok.extern.log4j.Log4j2;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,11 +30,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 @Service
+@Log4j2
 public class RestClient {
     private final RestTemplate restTemplate;
     private static final Logger logger = LoggerFactory.getLogger(RestClient.class);
@@ -85,7 +89,7 @@ public class RestClient {
                 return;
             }
             Map<String, String> map = new HashMap<>();
-            map.put(booking.getBookingId().toString(), new ObjectMapper().writeValueAsString(booking));
+            map.put("Booking", new ObjectMapper().writeValueAsString(booking));
             Notification notification = new Notification("New Booking", "Launch application to accept the booking", imageUrl);
             FcmRequest fcmRequest = new FcmRequest(deviceId, map, notification);
             String baseUrl = "https://fcm.googleapis.com/fcm/send";
@@ -234,5 +238,16 @@ public class RestClient {
         logger.info("Server Ping:"+str);
         str = restTemplate.exchange(baseUrll, HttpMethod.GET, entity, String.class).getBody();
         logger.info("Server Ping:"+str);
+    }
+
+    @Async
+    public void sendEmail(Booking booking) throws IOException, InterruptedException {
+        log.info("Start send email");
+        Thread.sleep(2000);
+        User client = getUser(booking.getClientId());
+        User merchant = getUser(booking.getMerchantId());
+        sendEmail(client.getEmail(), "Booking received", MailHelper.setContentForClient(booking, client));
+        sendEmail(merchant.getEmail(), "New Booking", MailHelper.setContentForMerchant(booking, merchant));
+        log.info("End send email");
     }
 }
