@@ -11,7 +11,6 @@ import com.bmk.bmkbookings.response.out.*;
 import com.bmk.bmkbookings.service.BookingService;
 import com.bmk.bmkbookings.service.PaymentService;
 import com.bmk.bmkbookings.util.*;
-import com.bmk.bmkbookings.util.MailHelper;
 import com.bmk.bmkbookings.util.RestClient;
 import com.bmk.bmkbookings.util.UserType;
 import com.fasterxml.jackson.core.JsonProcessingException;

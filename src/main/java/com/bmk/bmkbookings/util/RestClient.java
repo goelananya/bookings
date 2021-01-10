@@ -10,7 +10,6 @@ import com.bmk.bmkbookings.response.in.*;
 import com.bmk.bmkbookings.response.in.DeviceIdResponse;
 import com.bmk.bmkbookings.response.in.User;
 import com.bmk.bmkbookings.response.in.UserDetailsResponse;
-import com.bmk.bmkbookings.response.out.BookingResponse;
 import com.bmk.bmkbookings.response.out.MerchantResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
