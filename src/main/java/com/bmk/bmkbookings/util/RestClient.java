@@ -127,7 +127,7 @@ public class RestClient {
         logger.info("baseUrl:"+ baseUrl);
         HttpHeaders headers = getHttpHeaders();
         headers.set("token", "");
-        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
         UserDetailsResponse userDetailsResponse;
         try {
             userDetailsResponse = restTemplate.exchange(baseUrl, HttpMethod.GET, entity, UserDetailsResponse.class).getBody();
@@ -187,7 +187,7 @@ public class RestClient {
         HttpHeaders headers = getHttpHeaders();
         headers.set("token", superuserToken);
         String url = "https://bmkservicesendpoints.herokuapp.com/api/v1/services/all";
-        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
         ServicesResponse servicesResponse = restTemplate.exchange(url, HttpMethod.GET, entity, ServicesResponse.class).getBody();
         logger.info(servicesResponse.getData().toString());
          return Helper.convertServicesListToMap(servicesResponse.getData()).get(serviceId);
@@ -198,7 +198,7 @@ public class RestClient {
         HttpHeaders headers = getHttpHeaders();
         headers.set("token", "");
         String url = "https://bmkmerchant.herokuapp.com/merchant/profile?merchantId="+merchantId;
-        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
         MerchantResponseObject merchantResponseObject= restTemplate.exchange(url, HttpMethod.GET, entity, MerchantResponseObject.class).getBody();
         logger.info(merchantResponseObject.getMessage().toString());
         return merchantResponseObject.getMessage();
