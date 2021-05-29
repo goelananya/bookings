@@ -170,11 +170,12 @@ public class RestClient {
             HttpHeaders headers = getHttpHeaders();
             headers.set("token", superuserToken);
             String url = "https://bmkservicesendpoints.herokuapp.com/api/v1/portfolio?merchantId="+merchantId+"&internal=true";
-            HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
             PortfolioResponse portfolioResponse = restTemplate.exchange(url, HttpMethod.GET, entity, PortfolioResponse.class).getBody();
             logger.info(portfolioResponse.getMessage());
             return portfolioResponse;
         } catch (Exception e) {
+            log.info(e);
             throw new MerchantDoesNotExistException(merchantId);
         }
 
