@@ -4,6 +4,8 @@ import com.bmk.bmkbookings.bo.Booking;
 import com.bmk.bmkbookings.repo.BookingRepo;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -26,8 +28,8 @@ public class BookingService {
         booking.setBookingId(bookingRepo.save(booking).getBookingId());
     }
 
-    public Iterable<Booking> getBookingForClient(Long clientId){
-        return bookingRepo.findByClientId(clientId);
+    public Page<Booking> getBookingForClient(Pageable pageable, Long clientId){
+        return bookingRepo.findByClientId(pageable, clientId);
     }
 
     public Iterable<Booking> getBookingsForMerchant(Long merchantId){

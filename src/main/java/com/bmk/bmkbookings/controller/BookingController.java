@@ -17,6 +17,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import constants.BookingStatus;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
@@ -57,10 +60,12 @@ public class BookingController {
     }
 
     @GetMapping("/client")
-    public ResponseEntity getBookingForClient(@RequestHeader String token) throws UnauthorizedUserException {
+    public ResponseEntity getBookingForClient(@RequestHeader String token, Pageable pageable) throws UnauthorizedUserException {
         Long clientId = restClient.authorize(token, "delta");
-        List<BookingResponse> bookingResponses = BookingsMapper.mapBookings(bookingService.getBookingForClient(clientId));
-        return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingResponses));
+        Page<Booking> bookingPage = bookingService.getBookingForClient(pageable, clientId);
+        List<BookingResponse> bookingResponses = BookingsMapper.mapBookings(bookingPage);
+        HttpHeaders httpHeaders = new HttpHeaders();
+        return ResponseEntity.ok().header("totalElements", Long.toString(bookingPage.getTotalElements())).body(new BookingsListResponse("200", "Success", bookingResponses));
     }
 
     @GetMapping("/all")
