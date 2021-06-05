@@ -64,7 +64,6 @@ public class BookingController {
         Long clientId = restClient.authorize(token, "delta");
         Page<Booking> bookingPage = bookingService.getBookingForClient(pageable, clientId);
         List<BookingResponse> bookingResponses = BookingsMapper.mapBookings(bookingPage);
-        HttpHeaders httpHeaders = new HttpHeaders();
         return ResponseEntity.ok().header("totalElements", Long.toString(bookingPage.getTotalElements())).body(new BookingsListResponse("200", "Success", bookingResponses));
     }
 
