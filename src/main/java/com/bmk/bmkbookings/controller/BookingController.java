@@ -9,6 +9,7 @@ import com.bmk.bmkbookings.mapper.BookingsMapper;
 import com.bmk.bmkbookings.request.in.UpdateBookingStatus;
 import com.bmk.bmkbookings.response.out.*;
 import com.bmk.bmkbookings.service.BookingService;
+import com.bmk.bmkbookings.service.MerchantUserRelationService;
 import com.bmk.bmkbookings.service.PaymentService;
 import com.bmk.bmkbookings.util.*;
 import com.bmk.bmkbookings.util.RestClient;
@@ -39,13 +40,15 @@ public class BookingController {
     private final BookingService bookingService;
     private static RestClient restClient;
     private static PaymentService paymentService;
+    private static MerchantUserRelationService merchantUserRelationService;
     private static Set<String> statusSet = new HashSet<>();
 
     @Autowired
-    public BookingController(BookingService bookingService, RestClient restClient, PaymentService paymentService) {
+    public BookingController(BookingService bookingService, RestClient restClient, PaymentService paymentService, MerchantUserRelationService merchantUserRelationService) {
         this.bookingService = bookingService;
         this.restClient = restClient;
         this.paymentService = paymentService;
+        this.merchantUserRelationService = merchantUserRelationService;
         statusSet.add("accepted");
         statusSet.add("denied");
         statusSet.add("completed");
@@ -100,6 +103,9 @@ public class BookingController {
         Booking booking = bookingService.findByBookingId(bookingStatus.getBookingId()).iterator().next();
         if (!booking.getClientId().equals(clientId)) throw new UnauthorizedUserException();
         booking.setStatus(bookingStatus.getStatus());
+        if(booking.getStatus().equals("completed")) {
+            merchantUserRelationService.save(booking);
+        }
         bookingService.addNewBooking(booking);
         restClient.sendStatusUpdateNotification(booking, UserType.merchant);
         return ResponseEntity.ok(new GenericResponse("200", "Success", BookingsMapper.mapBooking(booking)));
@@ -112,6 +118,9 @@ public class BookingController {
         Booking booking = bookingService.findByBookingId(bookingStatus.getBookingId()).iterator().next();
         if (!booking.getMerchantId().equals(merchantId)) throw new UnauthorizedUserException();
         booking.setStatus(bookingStatus.getStatus());
+        if(booking.getStatus().equals("completed")) {
+            merchantUserRelationService.save(booking);
+        }
         bookingService.addNewBooking(booking);
         restClient.sendStatusUpdateNotification(booking, UserType.client);
         return ResponseEntity.ok(new GenericResponse("200", "Success", BookingsMapper.mapBooking(booking)));
@@ -131,6 +140,14 @@ public class BookingController {
 
     }
 
+    @GetMapping("rel")
+    public ResponseEntity getMerchantClientBookings(@RequestHeader String token, @RequestParam Long clientId) throws UnauthorizedUserException {
+        Long merchantId = restClient.authorize(token, "gamma");
+        List<Booking> bookings = bookingService.findByMerchantIdAndClientId(merchantId, clientId);
+        return ResponseEntity.ok(new GenericResponse("200", "Success", bookings.stream().map(BookingsMapper::mapBookingLite)));
+    }
+
+
     @GetMapping("ping")
     public String ping() {
         return "Hello";
@@ -148,5 +165,4 @@ public class BookingController {
         Long end = System.currentTimeMillis();
         log.info("Total time for updateBillingAmount:"+(end-start));
     }
-
 }

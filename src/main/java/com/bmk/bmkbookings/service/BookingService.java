@@ -48,6 +48,10 @@ public class BookingService {
         return bookingRepo.findByBookingId(bookingId);
     }
 
+    public List<Booking> findByMerchantIdAndClientId(Long merchantId, Long clientId) {
+        return bookingRepo.findAllByMerchantIdAndClientId(merchantId, clientId);
+    }
+
     public void expirePastBookings() {
         log.info("Calling db from expire bookings method");
         List<Booking> bookings = bookingRepo.findAllByStatus("pending");

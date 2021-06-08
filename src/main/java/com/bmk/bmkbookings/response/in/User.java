@@ -10,11 +10,9 @@ import lombok.NoArgsConstructor;
 public class User {
     Long staticUserId;
     String email;
-    String password;
     String name;
     String dateOfBirth;
     String gender;
     String phone;
-    String userType;
     String deviceId;
 }

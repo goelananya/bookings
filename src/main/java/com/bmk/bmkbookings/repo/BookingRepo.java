@@ -14,4 +14,5 @@ public interface BookingRepo extends CrudRepository<Booking, Long> {
     Iterable<Booking> findAllByDateAfterAndDateBefore(Date minDate, Date maxDate);
     Iterable<Booking> findByBookingId(Long bookingId);
     List<Booking> findAllByStatus(String bookingStatus);
+    List<Booking> findAllByMerchantIdAndClientId(Long merchantId, Long clientId);
 }
