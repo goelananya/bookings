@@ -31,6 +31,7 @@ import java.util.*;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @RequestMapping("booking")
 @RestController
@@ -55,11 +56,12 @@ public class BookingController {
         statusSet.add("cancelled");
     }
 
+    //TODO: Fix as per frontend requirements
     @GetMapping("/merchant")
     public ResponseEntity getBookingsForMerchant(@RequestHeader String token) throws UnauthorizedUserException {
         Long merchantId = restClient.authorize(token, "gamma");
-        List<BookingResponse> bookingResponses = BookingsMapper.mapBookings(bookingService.getBookingsForMerchant(merchantId));
-        return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingResponses));
+        List<Booking> bookings = bookingService.getBookingsForMerchant(merchantId);
+        return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookings.stream().map(BookingsMapper::mapBookingLite).collect(Collectors.toList())));
     }
 
     @GetMapping("/client")
@@ -129,15 +131,17 @@ public class BookingController {
     @PostMapping("payment")
     public ResponseEntity payment(@RequestHeader String token, @RequestBody PaymentBo paymentBo) throws UnauthorizedUserException, SignatureException {
         restClient.authorize(token, "delta");
-        paymentService.addPayment(paymentBo);
         String generated_signature = new Signature().calculateRFC2104HMAC(paymentBo.getOrderId() + "|" + paymentBo.getRazorpay_payment_id(), System.getenv("rpSec"));
 
         if (generated_signature.equals(paymentBo.getRazorpay_signature())) {
+            paymentBo.setSuccess(true);
+            paymentService.addPayment(paymentBo);
             return ResponseEntity.ok(new GenericResponse("200", "Success", "Received Payment"));
         } else {
+            paymentBo.setSuccess(false);
+            paymentService.addPayment(paymentBo);
             return ResponseEntity.badRequest().body(new GenericResponse("400", "Failed", "No Payment Received"));
         }
-
     }
 
     @GetMapping("rel")

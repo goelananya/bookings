@@ -32,7 +32,7 @@ public class BookingService {
         return bookingRepo.findByClientId(pageable, clientId);
     }
 
-    public Iterable<Booking> getBookingsForMerchant(Long merchantId){
+    public List<Booking> getBookingsForMerchant(Long merchantId){
         return bookingRepo.findByMerchantId(merchantId);
     }
 
