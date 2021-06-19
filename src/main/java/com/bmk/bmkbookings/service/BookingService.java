@@ -32,7 +32,7 @@ public class BookingService {
         return bookingRepo.findByClientId(pageable, clientId);
     }
 
-    public Iterable<Booking> getBookingsForMerchant(Long merchantId){
+    public List<Booking> getBookingsForMerchant(Long merchantId){
         return bookingRepo.findByMerchantId(merchantId);
     }
 
@@ -46,6 +46,10 @@ public class BookingService {
 
     public Iterable<Booking> findByBookingId(Long bookingId){
         return bookingRepo.findByBookingId(bookingId);
+    }
+
+    public List<Booking> findByMerchantIdAndClientId(Long merchantId, Long clientId) {
+        return bookingRepo.findAllByMerchantIdAndClientId(merchantId, clientId);
     }
 
     public void expirePastBookings() {

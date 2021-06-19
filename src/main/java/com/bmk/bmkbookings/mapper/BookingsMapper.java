@@ -32,9 +32,14 @@ public class BookingsMapper {
 
 
     public static BookingResponse mapBooking(Booking booking) {
-        BookingResponse bookingResponse = new BookingResponse(booking);
+        BookingResponse bookingResponse = mapBookingLite(booking);
         bookingResponse.setClientName(restClient.getUser(booking.getClientId()).getName());
         bookingResponse.setMerchant(restClient.getMerchantById(booking.getMerchantId()));
+        return bookingResponse;
+    }
+
+    public static BookingResponse mapBookingLite(Booking booking) {
+        BookingResponse bookingResponse = new BookingResponse(booking);
         List<Service> services = new ArrayList<>();
         for(String s: booking.getServiceIdCsv().split(",")) {
             if(StringUtil.isEmpty(s))   break;

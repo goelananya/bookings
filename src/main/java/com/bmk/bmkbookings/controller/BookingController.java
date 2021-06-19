@@ -9,6 +9,7 @@ import com.bmk.bmkbookings.mapper.BookingsMapper;
 import com.bmk.bmkbookings.request.in.UpdateBookingStatus;
 import com.bmk.bmkbookings.response.out.*;
 import com.bmk.bmkbookings.service.BookingService;
+import com.bmk.bmkbookings.service.MerchantUserRelationService;
 import com.bmk.bmkbookings.service.PaymentService;
 import com.bmk.bmkbookings.util.*;
 import com.bmk.bmkbookings.util.RestClient;
@@ -30,6 +31,7 @@ import java.util.*;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @RequestMapping("booking")
 @RestController
@@ -39,24 +41,27 @@ public class BookingController {
     private final BookingService bookingService;
     private static RestClient restClient;
     private static PaymentService paymentService;
+    private static MerchantUserRelationService merchantUserRelationService;
     private static Set<String> statusSet = new HashSet<>();
 
     @Autowired
-    public BookingController(BookingService bookingService, RestClient restClient, PaymentService paymentService) {
+    public BookingController(BookingService bookingService, RestClient restClient, PaymentService paymentService, MerchantUserRelationService merchantUserRelationService) {
         this.bookingService = bookingService;
         this.restClient = restClient;
         this.paymentService = paymentService;
+        this.merchantUserRelationService = merchantUserRelationService;
         statusSet.add("accepted");
         statusSet.add("denied");
         statusSet.add("completed");
         statusSet.add("cancelled");
     }
 
+    //TODO: Fix as per frontend requirements
     @GetMapping("/merchant")
     public ResponseEntity getBookingsForMerchant(@RequestHeader String token) throws UnauthorizedUserException {
         Long merchantId = restClient.authorize(token, "gamma");
-        List<BookingResponse> bookingResponses = BookingsMapper.mapBookings(bookingService.getBookingsForMerchant(merchantId));
-        return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookingResponses));
+        List<Booking> bookings = bookingService.getBookingsForMerchant(merchantId);
+        return ResponseEntity.ok(new BookingsListResponse("200", "Success", bookings.stream().map(BookingsMapper::mapBookingLite).collect(Collectors.toList())));
     }
 
     @GetMapping("/client")
@@ -100,6 +105,9 @@ public class BookingController {
         Booking booking = bookingService.findByBookingId(bookingStatus.getBookingId()).iterator().next();
         if (!booking.getClientId().equals(clientId)) throw new UnauthorizedUserException();
         booking.setStatus(bookingStatus.getStatus());
+        if(booking.getStatus().equals("completed")) {
+            merchantUserRelationService.save(booking);
+        }
         bookingService.addNewBooking(booking);
         restClient.sendStatusUpdateNotification(booking, UserType.merchant);
         return ResponseEntity.ok(new GenericResponse("200", "Success", BookingsMapper.mapBooking(booking)));
@@ -112,6 +120,9 @@ public class BookingController {
         Booking booking = bookingService.findByBookingId(bookingStatus.getBookingId()).iterator().next();
         if (!booking.getMerchantId().equals(merchantId)) throw new UnauthorizedUserException();
         booking.setStatus(bookingStatus.getStatus());
+        if(booking.getStatus().equals("completed")) {
+            merchantUserRelationService.save(booking);
+        }
         bookingService.addNewBooking(booking);
         restClient.sendStatusUpdateNotification(booking, UserType.client);
         return ResponseEntity.ok(new GenericResponse("200", "Success", BookingsMapper.mapBooking(booking)));
@@ -120,16 +131,26 @@ public class BookingController {
     @PostMapping("payment")
     public ResponseEntity payment(@RequestHeader String token, @RequestBody PaymentBo paymentBo) throws UnauthorizedUserException, SignatureException {
         restClient.authorize(token, "delta");
-        paymentService.addPayment(paymentBo);
         String generated_signature = new Signature().calculateRFC2104HMAC(paymentBo.getOrderId() + "|" + paymentBo.getRazorpay_payment_id(), System.getenv("rpSec"));
 
         if (generated_signature.equals(paymentBo.getRazorpay_signature())) {
+            paymentBo.setSuccess(true);
+            paymentService.addPayment(paymentBo);
             return ResponseEntity.ok(new GenericResponse("200", "Success", "Received Payment"));
         } else {
+            paymentBo.setSuccess(false);
+            paymentService.addPayment(paymentBo);
             return ResponseEntity.badRequest().body(new GenericResponse("400", "Failed", "No Payment Received"));
         }
-
     }
+
+    @GetMapping("rel")
+    public ResponseEntity getMerchantClientBookings(@RequestHeader String token, @RequestParam Long clientId) throws UnauthorizedUserException {
+        Long merchantId = restClient.authorize(token, "gamma");
+        List<Booking> bookings = bookingService.findByMerchantIdAndClientId(merchantId, clientId);
+        return ResponseEntity.ok(new GenericResponse("200", "Success", bookings.stream().map(BookingsMapper::mapBookingLite)));
+    }
+
 
     @GetMapping("ping")
     public String ping() {
@@ -148,5 +169,4 @@ public class BookingController {
         Long end = System.currentTimeMillis();
         log.info("Total time for updateBillingAmount:"+(end-start));
     }
-
 }
